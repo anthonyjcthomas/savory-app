@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Saveory-App",
-    "slug": "Saveory-App",
+    "name": "saveory",
+    "slug": "saveory",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -13,12 +13,16 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anthonyjcthomas.Saveory",
+      "buildNumber": "3",
+      "icon": "./appstore.png"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+        
       }
     },
     "web": {
@@ -31,6 +35,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "724950aa-1517-4152-9d7a-ab226e602194"
+      }
     }
   }
 }
