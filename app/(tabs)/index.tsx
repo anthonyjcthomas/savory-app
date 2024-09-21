@@ -153,14 +153,12 @@ const Page = () => {
 
                 {/* Filter Button Section */}
                 <View style={styles.filterSection}>
-                    <TouchableOpacity 
-                        style={styles.indexfilterButton} 
-                        onPress={() => setFilterModalVisible(true)}
-                    >
-                        <FontAwesome5 name="bars" size={18} color='#ffffff' />
-                    </TouchableOpacity>
-
-                    
+                <TouchableOpacity 
+                 style={styles.indexfilterButton} 
+                onPress={() => setFilterModalVisible(true)}
+    >
+                <Text style={styles.filterButtonText}>Filters</Text>
+                 </TouchableOpacity>
                 </View>
 
                 {/* Modal for Day, Hour, and Reset */}
@@ -197,12 +195,7 @@ const Page = () => {
             />
 
             {/* Near Me Button */}
-            <TouchableOpacity 
-                style={[styles.filterButton, styles.buttonSpacing]}
-                onPress={handleSortByDistance}
-            >
-                <Text style={styles.filterButtonText}>Nearest</Text>
-            </TouchableOpacity>
+            
 
             {/* Reset Button */}
             <TouchableOpacity onPress={resetFilters} style={[styles.filterButton, styles.buttonSpacing]}>
@@ -222,7 +215,8 @@ const Page = () => {
 
 
                 {/* Category filter */}
-                <Categories onCategoryChanged={setCategory} />
+                <Categories onCategoryChanged={setCategory} onSortByDistance={handleSortByDistance} />
+
 
                 {/* Establishments filtered by day, hour, and category */}
                 <Establishments 
@@ -261,8 +255,9 @@ const styles = StyleSheet.create({
         padding: 12,
         borderRadius: 8,
         marginHorizontal: 10,
-        width: 45, // Ensure buttons are uniform in size
+        width: 90, // Ensure buttons are uniform in size
         alignItems: 'center',
+        color: '#ffffff',
     },
     nearMeButton: {
         backgroundColor: '#264117',

@@ -4,6 +4,11 @@ const dealCategories = [
         iconName: 'apps'
     },
     {
+        title: 'Nearest',
+        iconName: "map-marker"
+
+    },
+    {
         title: 'Meals',
         iconName: 'silverware-fork-knife'
     },

@@ -1,84 +1,75 @@
-import { StyleSheet, Text, TouchableOpacity, View, Image, TextInput, ScrollView, Animated } from "react-native"
+import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from "react-native"
 import React, { useRef, useState } from 'react'
-import {Stack} from 'expo-router'
-import {Colors} from "@/constants/Colors"
-import {useHeaderHeight} from '@react-navigation/elements'
-import dealCategories from '../data/dealCategories';
 import { MaterialCommunityIcons } from "@expo/vector-icons"
-import { Ionicons } from "@expo/vector-icons"
+import dealCategories from '../data/dealCategories';
 
 type Props = {
     onCategoryChanged: (category: string) => void;
+    onSortByDistance: () => void; // New prop to handle nearest calculation
 }
 
-const Categories = ({onCategoryChanged}: Props) => {
+const Categories = ({ onCategoryChanged, onSortByDistance }: Props) => {
     const scrollRef = useRef<ScrollView>(null);
-    const itemRef = useRef<TouchableOpacity[] | null[]> ([]);
+    const itemRef = useRef<TouchableOpacity[] | null[]>([]);
     const [activeIndex, setActiveIndex] = useState(0);
 
     const handleSelectCategory = (index: number) => {
         const selected = itemRef.current[index];
-        
+
         setActiveIndex(index);
 
+        // Scroll to the selected category
         selected?.measure((x) => {
-            scrollRef.current?.scrollTo({x: x, y: 0, animated: true});
+            scrollRef.current?.scrollTo({ x: x, y: 0, animated: true });
         });
 
-        onCategoryChanged(dealCategories[index].title);
+        const selectedCategory = dealCategories[index].title;
+
+        // If "Nearest" is selected, trigger the nearest sorting
+        if (selectedCategory === 'Nearest') {
+            onSortByDistance();
+        } else {
+            onCategoryChanged(selectedCategory);
+        }
     };
+
     return (
-        <View> 
+        <View>
             <ScrollView
-            ref = {scrollRef}
-             horizontal
-             showsHorizontalScrollIndicator = {false}
-             style={styles.categoriesContainer}> 
-            {dealCategories.map((item,index) => (
-           <TouchableOpacity
-            key={index} 
-            ref={(element) => (itemRef.current[index] = element) }
-            onPress={() => handleSelectCategory(index)} 
-            style={
-                activeIndex == index ? styles.categoryBtnActive : styles.categoryBtn}>
-                <MaterialCommunityIcons
-                name={item.iconName as any}
-                size={20}
-                color= {activeIndex == index ? '#ffffff' : '#264117'}
-                />
-                <Text style={activeIndex ==  index ? styles.categoryBtnTextActive : styles.categoryText}>{item.title}</Text>
-            </TouchableOpacity>
-            ))}
+                ref={scrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.categoriesContainer}
+            >
+                {dealCategories.map((item, index) => (
+                    <TouchableOpacity
+                        key={index}
+                        ref={(element) => (itemRef.current[index] = element)}
+                        onPress={() => handleSelectCategory(index)}
+                        style={activeIndex === index ? styles.categoryBtnActive : styles.categoryBtn}
+                    >
+                        <MaterialCommunityIcons
+                            name={item.iconName as any}
+                            size={20}
+                            color={activeIndex === index ? '#ffffff' : '#264117'}
+                        />
+                        <Text style={activeIndex === index ? styles.categoryBtnTextActive : styles.categoryText}>
+                            {item.title}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
             </ScrollView>
         </View>
-    )
-}
+    );
+};
 
-export default Categories
+export default Categories;
 
 const styles = StyleSheet.create({
-    title: {
-        fontSize: 50,
-        fontWeight: '700',
-        color: '#264117',
-        marginLeft:10,
-        marginTop: 0
-        ,
-        
-
-
-    },
-    categoryItem: {
-        alignItems: 'center',
-        marginHorizontal: 10,
-    },
     categoryText: {
         fontSize: 20,
         color: '#264117',
         marginTop: 0,
-    },
-    scrollView: {
-        marginVertical: 20,
     },
     categoryBtn: {
         flexDirection: 'row',
@@ -111,11 +102,10 @@ const styles = StyleSheet.create({
         color: '#ffffff',
         marginTop: 0,
     },
-    
     categoriesContainer: {
         marginTop: 10,
-        paddingHorizontal: 5, 
+        paddingHorizontal: 5,
         marginLeft: 3,
         marginBottom: 10,
     },
-})
+});

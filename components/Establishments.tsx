@@ -192,10 +192,10 @@ const styles = StyleSheet.create({
     },
     bookmark: {
         position: 'absolute',
-        top: 135, // Adjusted based on image height
+        top: 140, // Adjusted based on image height
         right: 30,
         backgroundColor: '#264117',
-        padding: 10,
+        padding: 7,
         borderRadius: 30,
         borderWidth: 2,
         borderColor: '#ffffff',

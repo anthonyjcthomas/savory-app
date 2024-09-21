@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, Linking } from 'react-native';
+import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, Linking, Alert, ActivityIndicator } from 'react-native';
 import { Stack } from 'expo-router';
 import { useHeaderHeight } from '@react-navigation/elements';
 import establishmentsData from '@/data/establishmentsData.json';
@@ -7,11 +7,13 @@ import moment from 'moment-timezone';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { EstablishmentType, HappyHourDeal } from '@/types/establishmentType';
 import Categories from "@/components/Categories";
+import * as Location from 'expo-location';
 
 const Live = () => {
     const headerHeight = useHeaderHeight();
     const [liveEstablishments, setLiveEstablishments] = useState<EstablishmentType[]>([]);
     const [category, setCategory] = useState<string>('All');
+    const [loading, setLoading] = useState<boolean>(false); // Loading state for distance calculation
 
     useEffect(() => {
         const now = moment.tz('America/Chicago');
@@ -19,9 +21,8 @@ const Live = () => {
         const currentTime = now.format('HH:mm');
 
         const activeDeals = establishmentsData.filter((establishment: EstablishmentType) => {
-            const categoryMatch = category === 'All' || 
-    (Array.isArray(establishment.category) && establishment.category.includes(category));
- // Filter by category
+            const categoryMatch = category === 'All' ||
+                (Array.isArray(establishment.category) && establishment.category.includes(category));
             return (
                 categoryMatch &&
                 establishment.happy_hour_deals.some((deal: HappyHourDeal) => {
@@ -47,6 +48,49 @@ const Live = () => {
     const openMaps = (location: string, name: string) => {
         const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ', ' + location)}`;
         Linking.openURL(url);
+    };
+
+    const handleSortByDistance = async () => {
+        setLoading(true); // Show loading indicator
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert("Location Permission Denied", "Please allow location access to sort establishments by proximity.");
+            setLoading(false);
+            return;
+        }
+
+        const location = await Location.getCurrentPositionAsync({});
+        const userLatitude = location.coords.latitude;
+        const userLongitude = location.coords.longitude;
+
+        const sortedEstablishments = liveEstablishments
+            .map(establishment => {
+                const distance = calculateDistance(
+                    userLatitude,
+                    userLongitude,
+                    parseFloat(establishment.latitude),
+                    parseFloat(establishment.longitude)
+                );
+                return { ...establishment, distance };
+            })
+            .sort((a, b) => a.distance - b.distance);
+
+        setLiveEstablishments(sortedEstablishments); // Update state with sorted establishments
+        setLoading(false); // Hide loading indicator
+    };
+
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const toRad = (value: number) => (value * Math.PI) / 180;
+        const R = 6371; // Radius of the Earth in kilometers
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon1 - lon2);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c; // Distance in kilometers
+        return distance;
     };
 
     const renderEstablishment = ({ item }: { item: EstablishmentType }) => {
@@ -99,7 +143,6 @@ const Live = () => {
             </View>
         );
     };
-    
 
     return (
         <>
@@ -124,9 +167,17 @@ const Live = () => {
                 <Text style={styles.headingTxt}>Live Deals</Text>
 
                 {/* Categories Component */}
-                <Categories onCategoryChanged={setCategory} />
+                <Categories onCategoryChanged={setCategory} onSortByDistance={handleSortByDistance} />
 
-                {liveEstablishments.length > 0 ? (
+                {/* Loading Indicator */}
+                {loading && (
+                    <View style={styles.loadingOverlay}>
+                        <ActivityIndicator size="large" color="#ffffff" />
+                        <Text style={styles.loadingText}>Finding happy hours near you!</Text>
+                    </View>
+                )}
+
+                {liveEstablishments.length > 0 && !loading ? (
                     <FlatList
                         data={liveEstablishments}
                         keyExtractor={item => item.id}
@@ -135,7 +186,7 @@ const Live = () => {
                         showsVerticalScrollIndicator={false}
                     />
                 ) : (
-                    <Text style={styles.noDealsText}>No Happy Hour Deals at the moment.</Text>
+                    !loading && <Text style={styles.noDealsText}>No Happy Hour Deals at the moment.</Text>
                 )}
             </View>
         </>
@@ -185,7 +236,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 5,
         width: '94.5%', // Shrink the width to 90% of the screen width
-     alignSelf: 'center' // Center the container
+        alignSelf: 'center' // Center the container
     },
     establishmentImage: {
         width: '100%',
@@ -243,5 +294,21 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 350,
         color: '#555',
+    },
+    loadingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: 15,
+        color: '#ffffff',
+        fontSize: 18,
+        fontWeight: '600',
     },
 });

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Image, Dimensions, TouchableOpacity, Linking } from "react-native";
 import MapView, { Marker } from 'react-native-maps';
 import MapViewCluster from 'react-native-map-clustering';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useHeaderHeight } from '@react-navigation/elements';
 import * as Location from 'expo-location';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons'; // Import the icon
@@ -11,6 +11,7 @@ import getCoordinatesFromAddress from '@/components/GeocodingUtility'; // Adjust
 
 const SearchPage = () => {
     const headerHeight = useHeaderHeight();
+    const router = useRouter(); // Initialize router for navigation
     const [currentLocation, setCurrentLocation] = useState<Location.LocationObjectCoords | null>(null);
     const [selectedEstablishment, setSelectedEstablishment] = useState<string | null>(null);
     const [establishmentCoords, setEstablishmentCoords] = useState({});
@@ -42,10 +43,15 @@ const SearchPage = () => {
         fetchCoordinates();
     }, []);
 
+    // Navigate to the establishment details page when the image is clicked
     const handleMarkerPress = (id: string) => {
         setSelectedEstablishment(prev => (prev === id ? null : id));
     };
-    
+
+    const handleImagePress = (id: string) => {
+        // Navigate to the details page with the establishment ID
+        router.push(`/Establishments/${id}`);
+    };
 
     const openMaps = (location: string) => {
         const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
@@ -53,7 +59,7 @@ const SearchPage = () => {
     };
 
     const renderExpandedView = (establishment: any) => (
-        <View style={styles.expandedView}>
+        <TouchableOpacity onPress={() => handleImagePress(establishment.id)} style={styles.expandedView}>
             <Image
                 source={{ uri: establishment.image }}
                 style={styles.expandedImage}
@@ -81,7 +87,7 @@ const SearchPage = () => {
                     </TouchableOpacity>
                 </View>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 
     return (
@@ -265,7 +271,7 @@ const styles = StyleSheet.create({
     directionsWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 10, // Add padding to make the hitbox larger
+        padding: 6, // Add padding to make the hitbox larger
         borderRadius: 5, // Add border radius for aesthetics
         backgroundColor: '#ffffff', // Add background color to make the hitbox visible
     },

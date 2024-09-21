@@ -18,16 +18,25 @@ const EstablishmentDetails: React.FC = () => {
 
     const scrollRef = useAnimatedRef<Animated.ScrollView>();
     const scrollOffset = useScrollViewOffset(scrollRef);
+
+    // Updated animated style with limited stretch and added scale
     const imageAnimatedStyle = useAnimatedStyle(() => {
+        const scale = interpolate(
+            scrollOffset.value,
+            [-IMG_HEIGHT, 0, IMG_HEIGHT],
+            [1.5, 1, 1] // Scale effect: zoom in slightly when pulling down
+        );
+
+        const translateY = interpolate(
+            scrollOffset.value,
+            [-IMG_HEIGHT, 0, IMG_HEIGHT],
+            [-IMG_HEIGHT / 4, 0, IMG_HEIGHT / 8] // Less extreme vertical movement
+        );
+
         return {
             transform: [
-                {
-                    translateY: interpolate(
-                        scrollOffset.value,
-                        [-IMG_HEIGHT, 0, IMG_HEIGHT],
-                        [-IMG_HEIGHT / 2, 0, IMG_HEIGHT * 0.75]
-                    ),
-                },
+                { scale },
+                { translateY },
             ],
         };
     });
