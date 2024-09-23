@@ -8,7 +8,7 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./splash-screen.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -16,7 +16,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anthonyjcthomas.Saveory",
       "buildNumber": "3",
-      "icon": "./appstore.png"
+      "icon": "NEW_APP_LOGO.png"
     },
     "android": {
       "adaptiveIcon": {

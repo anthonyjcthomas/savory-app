@@ -110,6 +110,7 @@ const SearchPage = () => {
             />
             <View style={[styles.container, { paddingTop: headerHeight }]}>
                 <Text style={styles.headingTxt}>Find Food</Text>
+                
                 <MapViewCluster
                     style={styles.map}
                     initialRegion={{
@@ -119,7 +120,7 @@ const SearchPage = () => {
                         longitudeDelta: 0.0421,
                     }}
                 >
-                    {currentLocation && (
+                {currentLocation && (
                         <Marker
                             coordinate={{
                                 latitude: currentLocation.latitude,
@@ -127,10 +128,13 @@ const SearchPage = () => {
                             }}
                         >
                             <View style={styles.currentLocationMarker}>
-                                <Ionicons name="location" size={40} color='#264117' />
+                                <View style={styles.outerCircle}>
+                                <View style={styles.innerCircle} />
+                            </View>
                             </View>
                         </Marker>
                     )}
+                    
                     {Object.entries(establishmentCoords).map(([id, coords]) => {
                         const establishment = establishmentsData.find(est => est.id === id);
                         if (!establishment) return null;
@@ -168,6 +172,24 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
+    },
+    currentLocationMarker: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    outerCircle: {
+        width: 70,  // Outer blue glow size
+        height: 70,
+        borderRadius: 40, // Fully rounded
+        backgroundColor: 'rgba(0,122,255,0.3)', // Light blue transparent color for outer glow
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    innerCircle: {
+        width: 30,  // Inner solid blue circle size
+        height: 30,
+        borderRadius: 15, // Fully rounded
+        backgroundColor: '#007AFF', // Solid blue color for inner dot
     },
     map: {
         width: Dimensions.get('window').width - 20,
@@ -228,9 +250,9 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     currentLocationMarker: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 80,
+        height: 80,
+        borderRadius: 80,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -271,7 +293,7 @@ const styles = StyleSheet.create({
     directionsWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 6, // Add padding to make the hitbox larger
+        padding: 7, // Add padding to make the hitbox larger
         borderRadius: 5, // Add border radius for aesthetics
         backgroundColor: '#ffffff', // Add background color to make the hitbox visible
     },

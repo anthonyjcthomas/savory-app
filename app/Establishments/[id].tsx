@@ -235,6 +235,7 @@ const styles = StyleSheet.create({
         marginRight: 5,
     },
     happyHourText: {
+        top: 5,
         fontSize: 16,
         color: '#264117',
     },
