@@ -115,63 +115,52 @@ const Establishments = ({ category, dotw, selectedHour, sortedByDistance }: Prop
     return moment(time, ['h:mm A']).format('HH:mm');
   };
 
-  // Filter and sort establishments when dependencies change
   useEffect(() => {
     let updatedEstablishments = [...establishments];
-
-    // Filter by category
+  
+    // Normalize the time for comparison
+    const normalizeTime = (time) => {
+      if (time === "12:00 AM") return "00:00"; // Midnight case
+      return moment(time, ['h:mm A']).format('HH:mm');
+    };
+  
     if (category !== "All") {
-      updatedEstablishments = updatedEstablishments.filter(establishment => {
-        return Array.isArray(establishment.category)
-          ? establishment.category.includes(category)
-          : establishment.category === category;
-      });
+      updatedEstablishments = updatedEstablishments.filter(establishment =>
+        Array.isArray(establishment.category) ? establishment.category.includes(category) : establishment.category === category
+      );
     }
-
-    // Filter by day of week
-    if (dotw !== "Select Day") {
-      updatedEstablishments = updatedEstablishments.filter(establishment => {
-        return establishment.happy_hour_deals.some(deal => {
-          return deal.deal_list.includes(dotw);
-        });
-      });
-    }
-
-    // Filter by hour
-    if (selectedHour !== "Select Hour") {
+  
+    if (dotw !== "Select Day" && selectedHour !== "Select Hour") {
       const selectedTime = normalizeTime(selectedHour);
-      updatedEstablishments = updatedEstablishments.filter(establishment => {
-        return establishment.happy_hour_deals.some(deal => {
+      updatedEstablishments = updatedEstablishments.filter(establishment =>
+        establishment.happy_hour_deals.some(deal => {
+          const dayMatch = deal.deal_list.includes(dotw); // Check if the deal day matches
+          if (!dayMatch) return false;
+  
           const dealStartTime = normalizeTime(deal.start_time);
           const dealEndTime = normalizeTime(deal.end_time);
-
           const startTimeMoment = moment(dealStartTime, "HH:mm");
           let endTimeMoment = moment(dealEndTime, "HH:mm");
-
-          // If the end time is before the start time, it spans to the next day
+  
+          // Handle deals that span over midnight
           if (endTimeMoment.isBefore(startTimeMoment)) {
-            endTimeMoment.add(1, 'day');
+            endTimeMoment.add(1, 'day'); // this handles overnight deals that end after midnight
           }
-
+  
           const selectedTimeMoment = moment(selectedTime, "HH:mm");
-          return selectedTimeMoment.isBetween(startTimeMoment, endTimeMoment, null, '[)');
-        });
-      });
+          // Check if the selected time is within the deal's time range
+          return selectedTimeMoment.isBetween(startTimeMoment, endTimeMoment, null, '[]'); // Inclusive of start and end times
+        })
+      );
     }
-
-    // Sort by distance if sortedByDistance flag is true
+  
     if (sortedByDistance) {
-      updatedEstablishments.sort((a, b) => {
-        if (a.distance != null && b.distance != null) {
-          return a.distance - b.distance;
-        }
-        return 0;
-      });
+      updatedEstablishments.sort((a, b) => a.distance != null && b.distance != null ? a.distance - b.distance : 0);
     }
-
+  
     setFilteredEstablishments(updatedEstablishments);
   }, [category, dotw, selectedHour, establishments, sortedByDistance]);
-
+  
   const handleBookmark = (establishment: EstablishmentType) => {
     if (isBookmarked(establishment.id)) {
       removeBookmark(establishment.id);

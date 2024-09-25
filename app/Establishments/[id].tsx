@@ -178,7 +178,7 @@ const EstablishmentDetails: React.FC = () => {
     style={styles.outdatedButton}
     onPress={() => handleReportOutdatedHappyHour(establishment, user)} // Make sure 'establishment' and 'user' are properly defined in the component's scope
 >
-    <Text style={styles.outdatedButtonText}>Wrong?</Text>
+    <Text style={styles.outdatedButtonText}>Outdated?</Text>
 </TouchableOpacity>
                         <Text style={styles.footerTitle}>Happy Hours</Text>
                         {establishment.happy_hour_deals.map((deal, index) => (
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 20,
         borderRadius: 20,
-        width: '55%',
+        width: '40%',
         alignItems: 'center',
         marginBottom: 12,
     },
