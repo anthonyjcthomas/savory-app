@@ -2,7 +2,7 @@
   "expo": {
     "name": "saveory",
     "slug": "saveory",
-    "jsEngine" : "hermes",
+    "jsEngine": "hermes",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -16,6 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
+        "UIBackgroundModes": ["location"],
         "NSLocationWhenInUseUsageDescription": "We need access to your location to show nearby deals and businesses.",
         "NSLocationAlwaysUsageDescription": "We need access to your location in the background to keep updating the deals near you."
       },
@@ -27,7 +28,6 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-        
       }
     },
     "web": {
@@ -43,7 +43,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "724950aa-1517-4152-9d7a-ab226e602194"
+        "projectId": "84e2d133-27ae-4b09-b971-0dafc5a6f67a"
       }
     }
   }

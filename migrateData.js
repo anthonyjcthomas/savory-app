@@ -376,28 +376,6 @@ const establishments = [
  "dotw": ["Tuesday", "Wednesday", "Thursday", "Friday"],
  "cuisine": "American"
 },
-{
-    "id": "15",
-    "name": "Test",
-    "image": "https://static1.squarespace.com/static/56acc1138a65e2a286012c54/56ad05dfb09f9505c22897ef/5756ca76d51cd46816d2aa74/1613662125137/pixabaytest6-7.jpg?format=1500w",
-    "description": "The Kollege Klub, also known as KK, is a popular bar and restaurant located in the heart of Madison, WI. Known for its lively atmosphere and great deals, it's a favorite spot for college students and locals alike.",
-    "rating": "3.9",
-    "location": "529 N Lake St, Madison, WI 53703",
-    "happy_hour_deals": [
-        {
-            "day": "Tuesday-Thursday",
-            "details": "6:00-8:00: $15 Cheeseburger Basket and Bottomless Tap Beer.",
-            "start_time": "18:00",
-            "end_time": "d",
-            "deal_list": ["Tuesday", "Wednesday", "Thursday"]
-        },
-    ],
-    "latitude": "43.0753",
-    "longitude": "-89.3962",
-    "category": ["Drinks", "Combos"],
-    "dotw": ["Tuesday", "Wednesday", "Thursday", "Friday", "Sunday"],
-    "cuisine": "American"
-}
 ];
 
 async function authenticate() {

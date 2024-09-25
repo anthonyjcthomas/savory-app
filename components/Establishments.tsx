@@ -1,6 +1,6 @@
 import { collection, getDocs } from "firebase/firestore"; // Firestore imports
 import { db } from '../firebaseConfig'; // Firebase Firestore config
-import {FlatList, StyleSheet, Text, TouchableOpacity, View,Image, ListRenderItem,Dimensions,ActivityIndicator,} from "react-native";
+import { FlatList, StyleSheet, Text, TouchableOpacity, View, Image, ListRenderItem, Dimensions, ActivityIndicator } from "react-native";
 import React, { useEffect, useState } from 'react';
 import * as Location from 'expo-location';
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
@@ -8,11 +8,13 @@ import { EstablishmentType } from '@/types/establishmentType';
 import { Link } from "expo-router";
 import { useBookmarks } from '@/components/BookmarksContext';
 import { SharedElement } from 'react-navigation-shared-element';
+import moment from 'moment'; 
 
 type Props = {
   category: string;
   dotw: string;
-  sortedByDistance: boolean; // New prop to handle sorting by distance
+  selectedHour: string; // Add selectedHour prop
+  sortedByDistance: boolean;
 };
 
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -22,16 +24,13 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   const dLon = toRad(lon2 - lon1);
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c; // Distance in kilometers
   return distance;
 };
 
-const Establishments = ({ category, dotw, sortedByDistance }: Props) => {
+const Establishments = ({ category, dotw, selectedHour, sortedByDistance }: Props) => {
   const [loading, setLoading] = useState(true);
   const { addBookmark, removeBookmark, isBookmarked } = useBookmarks();
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
@@ -111,6 +110,11 @@ const Establishments = ({ category, dotw, sortedByDistance }: Props) => {
     initialize();
   }, []);
 
+  // Normalize the time for comparison
+  const normalizeTime = (time: string) => {
+    return moment(time, ['h:mm A']).format('HH:mm');
+  };
+
   // Filter and sort establishments when dependencies change
   useEffect(() => {
     let updatedEstablishments = [...establishments];
@@ -133,6 +137,28 @@ const Establishments = ({ category, dotw, sortedByDistance }: Props) => {
       });
     }
 
+    // Filter by hour
+    if (selectedHour !== "Select Hour") {
+      const selectedTime = normalizeTime(selectedHour);
+      updatedEstablishments = updatedEstablishments.filter(establishment => {
+        return establishment.happy_hour_deals.some(deal => {
+          const dealStartTime = normalizeTime(deal.start_time);
+          const dealEndTime = normalizeTime(deal.end_time);
+
+          const startTimeMoment = moment(dealStartTime, "HH:mm");
+          let endTimeMoment = moment(dealEndTime, "HH:mm");
+
+          // If the end time is before the start time, it spans to the next day
+          if (endTimeMoment.isBefore(startTimeMoment)) {
+            endTimeMoment.add(1, 'day');
+          }
+
+          const selectedTimeMoment = moment(selectedTime, "HH:mm");
+          return selectedTimeMoment.isBetween(startTimeMoment, endTimeMoment, null, '[)');
+        });
+      });
+    }
+
     // Sort by distance if sortedByDistance flag is true
     if (sortedByDistance) {
       updatedEstablishments.sort((a, b) => {
@@ -141,11 +167,10 @@ const Establishments = ({ category, dotw, sortedByDistance }: Props) => {
         }
         return 0;
       });
-      console.log("Establishments sorted by distance:", updatedEstablishments.map(e => ({ name: e.name, distance: e.distance })));
     }
 
     setFilteredEstablishments(updatedEstablishments);
-  }, [category, dotw, establishments, sortedByDistance]);
+  }, [category, dotw, selectedHour, establishments, sortedByDistance]);
 
   const handleBookmark = (establishment: EstablishmentType) => {
     if (isBookmarked(establishment.id)) {
@@ -163,11 +188,8 @@ const Establishments = ({ category, dotw, sortedByDistance }: Props) => {
         <TouchableOpacity style={styles.itemWrapper}>
           <View style={styles.item}>
             <SharedElement id={`item.${item.id}.photo`}>
-          <Image
-            source={{ uri: item.image }}
-            style={styles.image}
-          />
-        </SharedElement>
+              <Image source={{ uri: item.image }} style={styles.image} />
+            </SharedElement>
             <TouchableOpacity
               onPress={() => handleBookmark(item)}
               style={styles.bookmark}
@@ -246,7 +268,7 @@ const styles = StyleSheet.create({
   },
   itemWrapper: {
     flex: 1,
-    margin: 5, // Adjust to ensure spacing between the two items in a row
+    margin: 5,
   },
   item: {
     marginLeft: 2.5,
@@ -254,17 +276,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     padding: 10,
     borderRadius: 5,
-    width: (Dimensions.get('window').width / 2) - 15, // Ensure two items per row with proper spacing
+    width: (Dimensions.get('window').width / 2) - 15,
   },
   image: {
     width: '100%',
-    height: 150, // Adjusted height for better layout
+    height: 150,
     borderRadius: 10,
     marginBottom: 10,
   },
   bookmark: {
     position: 'absolute',
-    top: 140, // Adjusted based on image height
+    top: 140,
     right: 30,
     backgroundColor: '#264117',
     padding: 7,

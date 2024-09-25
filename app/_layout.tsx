@@ -1,4 +1,3 @@
-// app/layout.tsx (RootLayout)
 import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';

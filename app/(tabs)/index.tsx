@@ -112,59 +112,69 @@ const Page = () => {
         </View>
 
         {/* Modal for Day, Hour, and Reset */}
-        <Modal
-          transparent={true}
-          animationType="slide"
-          visible={filterModalVisible}
-          onRequestClose={() => setFilterModalVisible(false)}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalHeading}>Select Filters</Text>
+<Modal
+  transparent={true}
+  animationType="slide"
+  visible={filterModalVisible}
+  onRequestClose={() => setFilterModalVisible(false)}
+>
+  <View style={styles.modalContainer}>
+    <View style={styles.modalContent}>
+      <Text style={styles.modalHeading}>Select Filters</Text>
 
-              {/* Day Selector */}
-              <ModalDropdown
-                key={`day-dropdown-${dayOfWeek}`}
-                options={availableDays}
-                defaultValue={dayOfWeek}
-                onSelect={(index, value) => setDayOfWeek(value)}
-                textStyle={styles.dropdownText}
-                dropdownStyle={styles.dropdown}
-                dropdownTextStyle={styles.dropdownItemText}
-              />
+      {/* Day Selector */}
+      <ModalDropdown
+        key={`day-dropdown-${dayOfWeek}`}
+        options={availableDays}
+        defaultValue={dayOfWeek}
+        onSelect={(index, value) => setDayOfWeek(value)}
+        textStyle={styles.dropdownText}
+        dropdownStyle={styles.dropdown}
+        dropdownTextStyle={styles.dropdownItemText}
+      />
 
-              {/* Hour Selector */}
-              <ModalDropdown
-                key={`hour-dropdown-${selectedHour}`}
-                options={availableHours}
-                defaultValue={selectedHour}
-                onSelect={(index, value) => setSelectedHour(value)}
-                textStyle={styles.dropdownText}
-                dropdownStyle={styles.dropdown}
-                dropdownTextStyle={styles.dropdownItemText}
-              />
+      {/* Hour Selector */}
+      <ModalDropdown
+        key={`hour-dropdown-${selectedHour}`}
+        options={availableHours}
+        defaultValue={selectedHour}
+        onSelect={(index, value) => setSelectedHour(value)}
+        textStyle={styles.dropdownText}
+        dropdownStyle={styles.dropdown}
+        dropdownTextStyle={styles.dropdownItemText}
+      />
 
-              {/* Reset Button */}
-              <TouchableOpacity onPress={resetFilters} style={[styles.filterButton, styles.buttonSpacing]}>
-                <Text style={styles.filterButtonText}>Reset</Text>
-              </TouchableOpacity>
+      {/* Reset Button */}
+      <TouchableOpacity onPress={resetFilters} style={[styles.filterButton, styles.buttonSpacing]}>
+        <Text style={styles.filterButtonText}>Reset</Text>
+      </TouchableOpacity>
 
-              {/* Close Modal Button */}
-              <TouchableOpacity
-                onPress={() => setFilterModalVisible(false)}
-                style={[styles.filterButton, styles.buttonSpacing]}
-              >
-                <Text style={styles.filterButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+      {/* Apply Filters Button */}
+      <TouchableOpacity
+        onPress={() => setFilterModalVisible(false)} // Close modal after applying filters
+        style={[styles.filterButton, styles.buttonSpacing]}
+      >
+        <Text style={styles.filterButtonText}>Apply Filters</Text>
+      </TouchableOpacity>
+
+      {/* Close Modal Button */}
+      <TouchableOpacity
+        onPress={() => setFilterModalVisible(false)}
+        style={[styles.filterButton, styles.buttonSpacing]}
+      >
+        <Text style={styles.filterButtonText}>Close</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
+
 
         {/* Categories Component */}
         <Categories onCategoryChanged={handleCategoryChange} onSortByDistance={handleSortByDistance} />
 
         {/* Establishments filtered by day, hour, and category */}
         <Establishments
+          selectedHour={selectedHour}
           category={category}
           dotw={dayOfWeek}
           sortedByDistance={sortedByDistance}
