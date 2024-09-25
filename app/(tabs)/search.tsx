@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Image, Dimensions, TouchableOpacity, Linking } from "react-native";
+import { StyleSheet, Text, View, Image, Dimensions, TouchableOpacity, Linking, ActivityIndicator} from "react-native";
 import MapView, { Marker } from 'react-native-maps';
 import MapViewCluster from 'react-native-map-clustering';
 import { Stack, useRouter } from 'expo-router';
 import { useHeaderHeight } from '@react-navigation/elements';
 import * as Location from 'expo-location';
-import { FontAwesome5, Ionicons } from '@expo/vector-icons'; // Import the icon
-import establishmentsData from '@/data/establishmentsData.json';
-import getCoordinatesFromAddress from '@/components/GeocodingUtility'; // Adjust the import path as needed
+import { Ionicons } from '@expo/vector-icons';
+import { query, collection, getDocs } from "firebase/firestore"; // Firestore imports
+import { db } from '../../firebaseConfig'; // Firebase Firestore config
 
 const SearchPage = () => {
     const headerHeight = useHeaderHeight();
-    const router = useRouter(); // Initialize router for navigation
+    const router = useRouter();
     const [currentLocation, setCurrentLocation] = useState<Location.LocationObjectCoords | null>(null);
     const [selectedEstablishment, setSelectedEstablishment] = useState<string | null>(null);
-    const [establishmentCoords, setEstablishmentCoords] = useState({});
+    const [establishments, setEstablishments] = useState([]); // Store fetched establishments
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Request location permission and get current position
         (async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
@@ -28,27 +30,34 @@ const SearchPage = () => {
             setCurrentLocation(location.coords);
         })();
 
-        // Fetch coordinates for each establishment
-        const fetchCoordinates = async () => {
-            const coords = {};
-            for (const establishment of establishmentsData) {
-                const location = await getCoordinatesFromAddress(establishment.location);
-                if (location) {
-                    coords[establishment.id] = location;
-                }
+        // Fetch establishment data from Firestore
+        const fetchEstablishments = async () => {
+            try {
+                const establishmentsRef = collection(db, "establishments");
+                const q = query(establishmentsRef);
+                const querySnapshot = await getDocs(q);
+                const establishmentsArray = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    coordinates: {
+                        latitude: parseFloat(doc.data().latitude),
+                        longitude: parseFloat(doc.data().longitude)
+                    }
+                }));
+                setEstablishments(establishmentsArray);
+            } catch (error) {
+                console.error("Error fetching establishments:", error);
+            } finally {
+                setLoading(false);
             }
-            setEstablishmentCoords(coords);
         };
 
-        fetchCoordinates();
+        fetchEstablishments();
     }, []);
-
-    // Navigate to the establishment details page when the image is clicked
     const handleMarkerPress = (id: string) => {
         setSelectedEstablishment(prev => (prev === id ? null : id));
     };
-
-    const handleImagePress = (id: string) => {
+    const handleImagePress = (id) => {
         // Navigate to the details page with the establishment ID
         router.push(`/Establishments/${id}`);
     };
@@ -58,7 +67,7 @@ const SearchPage = () => {
         Linking.openURL(url);
     };
 
-    const renderExpandedView = (establishment: any) => (
+    const renderExpandedView = (establishment) => (
         <TouchableOpacity onPress={() => handleImagePress(establishment.id)} style={styles.expandedView}>
             <Image
                 source={{ uri: establishment.image }}
@@ -89,6 +98,16 @@ const SearchPage = () => {
             </View>
         </TouchableOpacity>
     );
+    
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#264117" />
+            <Text style={styles.loadingText}>Loading map and establishments...</Text>
+        </View>
+        );
+    }
 
     return (
         <>
@@ -109,18 +128,22 @@ const SearchPage = () => {
                 }}
             />
             <View style={[styles.container, { paddingTop: headerHeight }]}>
+            <Image
+                                source={require('../../assets/images/Savor-Logo.webp')}
+                                style={styles.image}
+                            />
                 <Text style={styles.headingTxt}>Find Food</Text>
                 
                 <MapViewCluster
                     style={styles.map}
                     initialRegion={{
-                        latitude: 43.0753,
-                        longitude: -89.3962,
+                        latitude: currentLocation ? currentLocation.latitude : 43.0753,
+                        longitude: currentLocation ? currentLocation.longitude : -89.3962,
                         latitudeDelta: 0.0922,
                         longitudeDelta: 0.0421,
                     }}
                 >
-                {currentLocation && (
+                    {currentLocation && (
                         <Marker
                             coordinate={{
                                 latitude: currentLocation.latitude,
@@ -129,37 +152,34 @@ const SearchPage = () => {
                         >
                             <View style={styles.currentLocationMarker}>
                                 <View style={styles.outerCircle}>
-                                <View style={styles.innerCircle} />
-                            </View>
+                                    <View style={styles.innerCircle} />
+                                </View>
                             </View>
                         </Marker>
                     )}
                     
-                    {Object.entries(establishmentCoords).map(([id, coords]) => {
-                        const establishment = establishmentsData.find(est => est.id === id);
-                        if (!establishment) return null;
-                        return (
-                            <Marker
-                                key={id}
-                                coordinate={coords}
-                                onPress={() => handleMarkerPress(id)}
-                            >
-                                <View>
-                                    {selectedEstablishment === id ? (
-                                        renderExpandedView(establishment)
-                                    ) : (
-                                        <View style={styles.marker}>
-                                            <Image
-                                                source={{ uri: establishment.image }}
-                                                style={styles.markerImage}
-                                            />
-                                            <Text style={styles.markerText}>{establishment.name}</Text>
-                                        </View>
-                                    )}
-                                </View>
-                            </Marker>
-                        );
-                    })}
+                    {establishments.map((establishment) => (
+    <Marker
+        key={establishment.id}
+        coordinate={establishment.coordinates}
+        onPress={() => handleMarkerPress(establishment.id)}
+    >
+        <View>
+            {selectedEstablishment === establishment.id ? (
+                renderExpandedView(establishment)
+            ) : (
+                <View style={styles.marker}>
+                    <Image
+                        source={{ uri: establishment.image }}
+                        style={styles.markerImage}
+                    />
+                    <Text style={styles.markerText}>{establishment.name}</Text>
+                </View>
+            )}
+        </View>
+    </Marker>
+))}
+
                 </MapViewCluster>
             </View>
         </>
@@ -167,6 +187,7 @@ const SearchPage = () => {
 };
 
 export default SearchPage;
+
 
 const styles = StyleSheet.create({
     container: {
@@ -206,9 +227,10 @@ const styles = StyleSheet.create({
         height: '100%',
         alignItems: 'center',
         justifyContent: 'center',
+        marginTop: 30,
     },
     headingTxt: {
-        marginTop: 10,
+        marginTop: 110,
         fontSize: 28,
         fontWeight: '800',
         backgroundColor: '#fffffff',
@@ -229,6 +251,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         left: '50%',
         transform: [{ translateX: -20 }],
+        marginTop: 57,
     },
     marker: {
         alignItems: 'center',
@@ -307,5 +330,16 @@ const styles = StyleSheet.create({
     HighlightTextVal: {
         fontSize: 8,
         color: '#7a7a7a',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f5f5f5'
+    },
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: '#264117'
     },
 });

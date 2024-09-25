@@ -41,6 +41,7 @@ export default function Layout() {
         name="search" // The route name for this tab
         options={{
           // Define the icon for this tab using Ionicons
+          headerShown: false,
           tabBarIcon: ({ color }) => (
             <Ionicons name="map" size={28} color={color} />
           ),

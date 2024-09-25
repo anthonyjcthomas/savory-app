@@ -1,21 +1,32 @@
 import React, { useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, Alert, View, Text } from 'react-native';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { Text, View } from '@/components/Themed'; // Assuming Themed component is being used for light/dark theme support
-import { router } from 'expo-router';
+import { setDoc, doc } from 'firebase/firestore';  // Import setDoc and doc
+import { db } from '@/firebaseConfig'; // Make sure to import your firestore instance
+import {router } from 'expo-router';
 
 export default function RegisterScreen() {
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
 
-  const handleRegister = () => {
-    createUserWithEmailAndPassword(getAuth(), email, password)
-      .then((userCredential) => {
-        if (userCredential) router.replace('/(tabs)');
-      })
-      .catch((error) => {
-        Alert.alert('Registration Error', 'Credentials Already Exist or Invalid Email');
+  const handleRegister = async () => {
+    const auth = getAuth();
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Add a new document in collection "users" with user's UID
+      await setDoc(doc(db, 'users', user.uid), {
+        username: username,
+        email: email,
       });
+
+      Alert.alert('Registration Successful', 'Welcome to Saveory!');
+      router.replace('/(tabs)'); // Navigate to the main app or dashboard
+    } catch (error) {
+      Alert.alert('Registration Error', error.message);
+    }
   };
 
   return (
@@ -25,10 +36,18 @@ export default function RegisterScreen() {
 
       <TextInput
         style={styles.input}
+        placeholder="Username"
+        placeholderTextColor="#888"
+        onChangeText={setUsername}
+        value={username}
+      />
+
+      <TextInput
+        style={styles.input}
         placeholder="Email"
-        placeholderTextColor="#264117"
+        placeholderTextColor="#888"
         keyboardType="email-address"
-        onChangeText={(text) => setEmail(text)}
+        onChangeText={setEmail}
         value={email}
         autoCapitalize="none"
       />
@@ -36,9 +55,9 @@ export default function RegisterScreen() {
       <TextInput
         style={styles.input}
         placeholder="Password"
-        placeholderTextColor="#264117"
+        placeholderTextColor="#888"
         secureTextEntry
-        onChangeText={(text) => setPassword(text)}
+        onChangeText={setPassword}
         value={password}
       />
 
@@ -76,7 +95,7 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 15,
     borderWidth: 1,
-    borderColor: '#ffffff', // White border
+    borderColor: '#ffffff',
     borderRadius: 10,
     backgroundColor: '#f2f2f2',
     marginBottom: 20,

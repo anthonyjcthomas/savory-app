@@ -1,57 +1,113 @@
-import React from 'react';
-import { StyleSheet, View, Image, Text, TouchableOpacity, Linking, Dimensions } from 'react-native';
-import Animated, { interpolate, useAnimatedRef, useAnimatedStyle, useScrollViewOffset } from 'react-native-reanimated';
+import { query, collection, where, getDocs } from "firebase/firestore";
+import { getDoc, doc } from "firebase/firestore"; // Firestore imports
+import { db } from '../../firebaseConfig'; // Firebase Firestore config
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Image, Text, TouchableOpacity, Linking, Dimensions, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather, FontAwesome5, Ionicons } from "@expo/vector-icons";
-import establishmentData from "@/data/establishmentsData.json";
 import { EstablishmentType } from "@/types/establishmentType";
+import { getAuth } from "firebase/auth";
+import CommentsSection from './CommentsSection';
 
 const { width } = Dimensions.get('window');
 const IMG_HEIGHT = 300;
 
+const SkeletonPlaceholder = () => (
+    <View style={styles.skeletoncontainer}>
+      <View style={styles.skeletonheader} />
+      <View style={styles.skeletonbody}>
+        {[1, 2, 3].map((_, index) => (
+          <View key={index} style={styles.skeletonblock} />
+        ))} 
+      </View>
+    </View>
+  );
+// Handle sending an email report for outdated happy hour details
+const handleReportOutdatedHappyHour = (establishment, user) => {
+    if (user && user.email) {
+        const subject = encodeURIComponent(`Incorrect happy hour for ${establishment.name}`);
+        const body = encodeURIComponent(`Dear Support,\n\nI noticed that the happy hour details for ${establishment.name} seem to be incorrect. Please review and update them if necessary.\n\nThank you,\n${user.email}`);
+        const emailUrl = `mailto:saveoryapp@gmail.com?subject=${subject}&body=${body}`;
+
+        Linking.canOpenURL(emailUrl)
+            .then((supported) => {
+                if (!supported) {
+                    Alert.alert('Error', 'No email client configured. Please set up an email app.');
+                } else {
+                    Linking.openURL(emailUrl);
+                }
+            })
+            .catch((err) => {
+                console.error('Error sending email:', err);
+                Alert.alert('Error', 'An error occurred while trying to send the email.');
+            });
+    } else {
+        Alert.alert('Error', 'No logged-in user found.');
+    }
+};
+  
 const EstablishmentDetails: React.FC = () => {
-    const { id } = useLocalSearchParams<{ id: string }>();
+    const { id } = useLocalSearchParams<{ id: string }>();  // Get the document ID from the URL params
     const router = useRouter();
-    const establishment: EstablishmentType | undefined = establishmentData.find(
-        (item) => item.id === id
-    );
+    const [establishment, setEstablishment] = useState<EstablishmentType | null>(null);
+    const [loading, setLoading] = useState(true); // Track loading state
+    const auth = getAuth();
+    const user = auth.currentUser;
 
-    const scrollRef = useAnimatedRef<Animated.ScrollView>();
-    const scrollOffset = useScrollViewOffset(scrollRef);
+    // Function to fetch establishment based on Firestore document ID
+    const fetchEstablishment = async () => {
+        if (!id) {
+            Alert.alert("Error", "No establishment ID provided.");
+            router.back();
+            return;
+        }
+    
+        try {
+            console.log("Fetching establishment with id:", id);
+            const establishmentsRef = collection(db, "establishments");
+            const q = query(establishmentsRef, where("id", "==", id)); // Use the internal 'id' field
+            const querySnapshot = await getDocs(q);
+    
+            if (!querySnapshot.empty) {
+                const establishmentData = querySnapshot.docs[0].data(); // Assuming only one document will match
+                console.log("Document data:", establishmentData);
+                setEstablishment({ ...establishmentData, id: querySnapshot.docs[0].id } as EstablishmentType);
+            } else {
+                console.log("No such document!");
+                Alert.alert("Error", "Establishment not found.");
+                setEstablishment(null);
+                router.back();
+            }
+        } catch (error) {
+            console.error("Error fetching document:", error);
+            Alert.alert("Error", "Failed to fetch establishment details.");
+            setEstablishment(null);
+            router.back();
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    // Updated animated style with limited stretch and added scale
-    const imageAnimatedStyle = useAnimatedStyle(() => {
-        const scale = interpolate(
-            scrollOffset.value,
-            [-IMG_HEIGHT, 0, IMG_HEIGHT],
-            [1.5, 1, 1] // Scale effect: zoom in slightly when pulling down
-        );
+    // Fetch the establishment when component mounts or ID changes
+    useEffect(() => {
+        fetchEstablishment();
+    }, [id]);
 
-        const translateY = interpolate(
-            scrollOffset.value,
-            [-IMG_HEIGHT, 0, IMG_HEIGHT],
-            [-IMG_HEIGHT / 4, 0, IMG_HEIGHT / 8] // Less extreme vertical movement
-        );
-
-        return {
-            transform: [
-                { scale },
-                { translateY },
-            ],
-        };
-    });
-
-    if (!establishment) {
+    if (loading) {
         return (
-            <View style={styles.container}>
-                <Text>Establishment not found</Text>
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#264117" />
+                <Text>Loading establishment details...</Text>
             </View>
         );
     }
 
     const openMaps = () => {
         const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.name + ', ' + establishment.location)}`;
-        Linking.openURL(url);
+        Linking.openURL(url).catch(err => {
+            console.error("Error opening maps:", err);
+            Alert.alert("Error", "Failed to open maps.");
+        });
     };
 
     return (
@@ -62,15 +118,19 @@ const EstablishmentDetails: React.FC = () => {
                 headerLeft: () => (
                     <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
                         <View style={styles.iconWrapper}>
-                            <Feather name='arrow-left' size={20} />
+                            <Feather name='arrow-left' size={20} color="#264117" />
                         </View>
                     </TouchableOpacity>
                 )
             }} />
             <View style={styles.container2}>
-                <Animated.Image source={{ uri: establishment.image }} style={[styles.image, imageAnimatedStyle]} />
-                <Animated.ScrollView
-                    ref={scrollRef}
+            <TouchableOpacity onPress={() => router.back()} style={styles.customBackButton}>
+                <Feather name='arrow-left' size={20} color="#fff" />
+                <Text style={styles.customBackButtonText}>Back </Text>
+            </TouchableOpacity>
+
+                <Image source={{ uri: establishment.image }} style={styles.image} />
+                <ScrollView
                     contentContainerStyle={styles.scrollViewContent}
                     showsVerticalScrollIndicator={false}
                 >
@@ -114,6 +174,12 @@ const EstablishmentDetails: React.FC = () => {
                     </View>
 
                     <View style={styles.footer}>
+                    <TouchableOpacity
+    style={styles.outdatedButton}
+    onPress={() => handleReportOutdatedHappyHour(establishment, user)} // Make sure 'establishment' and 'user' are properly defined in the component's scope
+>
+    <Text style={styles.outdatedButtonText}>Outdated Happy Hour?</Text>
+</TouchableOpacity>
                         <Text style={styles.footerTitle}>Happy Hours</Text>
                         {establishment.happy_hour_deals.map((deal, index) => (
                             <View key={index} style={styles.happyHourDeal}>
@@ -122,7 +188,8 @@ const EstablishmentDetails: React.FC = () => {
                             </View>
                         ))}
                     </View>
-                </Animated.ScrollView>
+                    <CommentsSection establishmentId={id} />
+                </ScrollView>
             </View>
         </>
     );
@@ -132,6 +199,11 @@ export default EstablishmentDetails;
 
 const styles = StyleSheet.create({
     container: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
@@ -148,7 +220,7 @@ const styles = StyleSheet.create({
     contentWrapper: {
         padding: 20,
         width: '100%',
-        backgroundColor: '#ffffff', // Ensure the top part of the content has a white background
+        backgroundColor: '#ffffff',
     },
     container2: {
         flex: 1,
@@ -157,19 +229,19 @@ const styles = StyleSheet.create({
     establishmentName: {
         fontSize: 24,
         fontWeight: '500',
-        color: '#264117',  // Change to primary color green
+        color: '#264117',
         letterSpacing: 0.5,
     },
     establishmentLocationWrapper: {
         flexDirection: 'row',
         marginTop: 5,
         marginBottom: 10,
-        alignItems: 'center',  
+        alignItems: 'center',
     },
     establishmentLocationText: {
         fontSize: 14,
         marginLeft: 5,
-        color: '#264117',  // Change to primary color green
+        color: '#264117',
     },
     headerButton: {
         backgroundColor: "#ffffff",
@@ -179,7 +251,7 @@ const styles = StyleSheet.create({
     iconWrapper: {
         backgroundColor: '#ffffff',
         padding: 6,
-        borderRadius: 10,  
+        borderRadius: 10,
     },
     highlightRow: {
         flexDirection: 'row',
@@ -202,6 +274,20 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#7a7a7a',
     },
+    outdatedButton: {
+        backgroundColor: '#264117',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        width: '55%',
+        alignItems: 'center',
+        marginBottom: 5,
+    },
+    outdatedButtonText: {
+        color: '#ffffff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
     establishmentDetails: {
         fontSize: 16,
         color: "#264117",
@@ -217,19 +303,19 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     footerTitle: {
-        fontSize: 28, // Larger font for Happy Hours title
+        fontSize: 28,
         fontWeight: '600',
         color: '#264117',
         marginBottom: 10,
     },
     happyHourDeal: {
         marginBottom: 10,
-        alignItems: 'flex-start', // Align text to the start of the line
+        alignItems: 'flex-start',
         flexDirection: 'row',
-        flexWrap: 'wrap' // Wrap text within the screen width
+        flexWrap: 'wrap'
     },
     happyHourDay: {
-        fontSize: 20, // Larger font for day of the week
+        fontSize: 20,
         fontWeight: '600',
         color: '#264117',
         marginRight: 5,
@@ -239,4 +325,39 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#264117',
     },
+    skeletoncontainer: {
+        flex: 1,
+        padding: 20,
+        backgroundColor: '#fff',
+      },
+      skeletonheader: {
+        height: 20,
+        width: width - 40,
+        backgroundColor: '#e1e1e1',
+        marginBottom: 10,
+      },
+    customBackButton: {
+        position: 'absolute',
+        top: 40, // Adjust this value to move the button down or up
+        left: 20,
+        backgroundColor: '#264117',
+        padding: 10,
+        borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        zIndex: 1, // Make sure it's on top of the content
+    },
+    customBackButtonText: {
+        color: '#fff',
+        marginLeft: 8,
+        fontSize: 16,
+    },
+      skeletonbody: {
+        flex: 1,
+      },
+      skeletonblock: {
+        height: 100,
+        backgroundColor: '#e1e1e1',
+        marginBottom: 10,
+      },
 });

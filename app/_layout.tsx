@@ -1,3 +1,4 @@
+// app/layout.tsx (RootLayout)
 import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
@@ -44,11 +45,17 @@ export default function RootLayout() {
     <BookmarksProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
-          {/* All the screens are available here, navigation will take care of the redirection */}
+          {/* Stack Screens */}
           <Stack.Screen name="landing" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+
+          {/* Establishment Details Screen */}
+          <Stack.Screen
+            name="Establishments/[id]"
+            options={{ headerShown: false }}
+          />
         </Stack>
       </ThemeProvider>
     </BookmarksProvider>
