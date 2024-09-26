@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Linking } from 'react-native';
 import { db } from '../../firebaseConfig'; // Ensure this path is correct
-import {  collection, addDoc, query, where, onSnapshot, doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { deleteDoc, collection, addDoc, query, where, onSnapshot, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; // Import auth
 
 const CommentsSection = ({ establishmentId }) => {
@@ -41,20 +41,42 @@ const CommentsSection = ({ establishmentId }) => {
         return () => unsubscribe();
     }, [establishmentId]);
 
+    const handleDeleteComment = async (commentId) => {
+        try {
+            await deleteDoc(doc(db, 'comments', commentId));
+        } catch (error) {
+            console.error("Error deleting comment: ", error);
+        }
+    };
+    
     const handleAddComment = async () => {
-        if (newComment.trim()) {
+        const auth = getAuth();
+        const user = auth.currentUser;
+        
+        if (newComment.trim() && user) {
             try {
                 await addDoc(collection(db, 'comments'), {
                     establishmentId: establishmentId,
                     comment: newComment,
-                    username: username, // Use username for the comment
-                    timestamp: serverTimestamp() // Use server timestamp for consistency
+                    username: username,
+                    userId: user.uid, // Add userId to the comment
+                    timestamp: serverTimestamp()
                 });
                 setNewComment(''); // Clear input after submission
             } catch (error) {
                 console.error("Error adding comment: ", error);
             }
         }
+    };
+
+    const handleReportComment = (username, commentText) => {
+        const supportEmail = 'savoeryapp@gmail.com'; // Replace with your support email
+        const subject = 'Report Inappropriate Comment';
+        const body = `I would like to report the following comment:\n\nUser: ${username}\nComment: "${commentText}"\n\nPlease review this.`;
+        
+        const mailtoURL = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        
+        Linking.openURL(mailtoURL).catch(err => console.error('Error opening email client: ', err));
     };
 
     // Helper function to format the timestamp
@@ -76,11 +98,23 @@ const CommentsSection = ({ establishmentId }) => {
                             <Text style={styles.username}>{item.username}</Text>
                             <Text style={styles.commentText}>{item.comment}</Text>
                         </View>
-                        <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
+                        <View style={styles.commentFooter}>
+                            <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
+                            {item.userId === getAuth().currentUser?.uid ? (
+                                <TouchableOpacity onPress={() => handleDeleteComment(item.id)}>
+                                    <Text style={styles.deleteButton}>Delete</Text>
+                                </TouchableOpacity>
+                            ) : (
+                                <TouchableOpacity onPress={() => handleReportComment(item.username, item.comment)}>
+                                    <Text style={styles.reportButton}>Report</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
                     </View>
                 )}
                 ListEmptyComponent={<Text style={styles.noComments}>No comments yet. Be the first to comment!</Text>}
             />
+
 
             <View style={styles.inputContainer}>
                 <TextInput
@@ -137,6 +171,9 @@ const styles = StyleSheet.create({
         flex: 1,
         marginRight: 10,
     },
+    commentFooter: {
+        justifyContent: 'space-between',
+    },
     username: {
         fontWeight: 'bold',
         color: '#222',
@@ -183,6 +220,20 @@ const styles = StyleSheet.create({
     noComments: {
         textAlign: 'center',
         color: '#777',
+        marginTop: 10,
+    },
+    deleteButton: {
+        color: '#264117',
+        fontSize: 14,
+        textDecorationLine: 'underline',
+        alignSelf: 'flex-end',
+        marginTop: 10,
+    },
+    reportButton: {
+        color: '#264117',
+        fontSize: 14,
+        textDecorationLine: 'underline',
+        alignSelf: 'flex-end',
         marginTop: 10,
     },
 });

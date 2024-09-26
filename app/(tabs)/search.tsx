@@ -8,6 +8,7 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { query, collection, getDocs } from "firebase/firestore"; // Firestore imports
 import { db } from '../../firebaseConfig'; // Firebase Firestore config
+import { requestTrackingPermission } from 'react-native-tracking-transparency'; // Import the tracking transparency API
 
 const SearchPage = () => {
     const headerHeight = useHeaderHeight();
@@ -16,8 +17,21 @@ const SearchPage = () => {
     const [selectedEstablishment, setSelectedEstablishment] = useState<string | null>(null);
     const [establishments, setEstablishments] = useState([]); // Store fetched establishments
     const [loading, setLoading] = useState(true);
+    
 
     useEffect(() => {
+        // Request tracking permission on app load
+        const askForTrackingPermission = async () => {
+            const trackingStatus = await requestTrackingPermission();
+            if (trackingStatus === 'authorized') {
+                console.log("Tracking permission granted.");
+            } else {
+                console.log("Tracking permission denied or restricted.");
+            }
+        };
+
+        askForTrackingPermission(); // Call the permission request function
+
         // Request location permission and get current position
         (async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();

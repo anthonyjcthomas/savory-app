@@ -376,6 +376,50 @@ const establishments = [
  "dotw": ["Tuesday", "Wednesday", "Thursday", "Friday"],
  "cuisine": "American"
 },
+{
+ "id": "11",
+ "name": "Cento",
+ "image": "https://resizer.otstatic.com/v2/photos/xlarge/1/25926432.jpg",
+ "description": "A premiere Italian restaurant in downtown Madison, where we combine Old World Italian traditions with modern techniques.",
+ "rating": "4.1",
+ "location": "122 W Mifflin St, Madison, WI 53703",
+ "happy_hour_deals": [
+     {
+         "day": "Everyday",
+         "details": "4:00-6:00PM: $5 Classic Italian Cocktails, $3 Pints of Peroni, $10 Glasses of Wine.",
+         "start_time": "16:00",
+         "end_time": "18:00",
+         "deal_list":["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+     }
+ ],
+ "latitude": "43.0743299",
+ "longitude": "-89.3820804",
+ "category": ["Drinks"],
+ "dotw": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+ "cuisine": "Italian"
+},
+{
+ "id": "15",
+ "name": "Test",
+ "image": "https://images.squarespace-cdn.com/content/v1/59651623d482e9030f764c54/1596666231928-4DFVYXWHSFUCH6IRFNRS/Tavernakaya+Storefront.jpeg",
+ "description": "Test owls & Japanese tapas along with local & Asian beers.",
+ "rating": "3.6",
+ "location": "27 E Main St, Madison, WI 53703",
+ "happy_hour_deals": [
+     {
+         "day": "Monday-Friday",
+         "details": "4:30-6:00PM: Half off House Sake, All Wines, and Rail Mixers, $4 Draft Sapporo and Spotted, and $5 Sushi Rolls, Popcorn Chicken, Fries, and Edamame.",
+         "start_time": "16:30",
+         "end_time": "18:00",
+         "deal_list": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+     }
+ ],
+ "latitude": "43.0743500",
+ "longitude": "-89.3820800",
+ "category": ["Drinks", "Appetizers"],
+ "dotw": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+ "cuisine": "Japanese"
+}
 ];
 
 async function authenticate() {

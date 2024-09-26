@@ -6,6 +6,8 @@ import { EstablishmentType } from '@/types/establishmentType';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { Link } from 'expo-router';
+import { requestTrackingPermission } from 'react-native-tracking-transparency'; // Add this import
+
 
 const { width } = Dimensions.get('window');
 
@@ -15,6 +17,15 @@ const BookmarksPage: React.FC = () => {
 
     useEffect(() => {
         (async () => {
+            // Request tracking permission
+            const trackingStatus = await requestTrackingPermission();
+            if (trackingStatus === 'authorized') {
+                console.log('Tracking permission granted.');
+            } else {
+                console.log('Tracking permission denied or restricted.');
+            }
+
+            // Request location permission
             let { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
                 console.log('Permission to access location was denied');

@@ -9,7 +9,6 @@ const firebaseConfig = {
   authDomain: 'savor-app-184a6.firebaseapp.com',
   projectId: 'savor-app-184a6',
   storageBucket: 'savor-app-184a6.appspot.com',
-  messagingSenderId: '288112913980',
   appId: '1:288112913980:web:52cdf6a98628a2354b5d39',
   measurementId: 'G-RHZSMDGB2K',
 };

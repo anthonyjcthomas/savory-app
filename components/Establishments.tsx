@@ -9,6 +9,7 @@ import { Link } from "expo-router";
 import { useBookmarks } from '@/components/BookmarksContext';
 import { SharedElement } from 'react-navigation-shared-element';
 import moment from 'moment'; 
+import { requestTrackingPermission } from 'react-native-tracking-transparency';
 
 type Props = {
   category: string;
@@ -61,12 +62,13 @@ const Establishments = ({ category, dotw, selectedHour, sortedByDistance }: Prop
         console.log('Permission to access location was denied');
         return null;
       }
-
+  
       let location = await Location.getCurrentPositionAsync({});
+      console.log("User location retrieved:", location); // Add logging here to verify location data
       setUserLocation(location);
       return location;
     } catch (error) {
-      console.error("Error getting user location:", error);
+      console.error("Error getting user location:", error); // Add error logging
       return null;
     }
   };
@@ -95,20 +97,39 @@ const Establishments = ({ category, dotw, selectedHour, sortedByDistance }: Prop
   // Fetch data and user location on mount
   useEffect(() => {
     const initialize = async () => {
-      setLoading(true);
-      const fetchedEstablishments = await fetchEstablishments();
-      const location = await getUserLocation();
-      if (location) {
-        const establishmentsWithDistance = calculateDistances(location, fetchedEstablishments);
-        setEstablishments(establishmentsWithDistance);
-      } else {
-        setEstablishments(fetchedEstablishments); // Without distance
+      try {
+        // Request tracking permission
+        const trackingStatus = await requestTrackingPermission();
+        if (trackingStatus === 'authorized') {
+          console.log('Tracking permission granted.');
+        } else {
+          console.log('Tracking permission denied or restricted.');
+        }
+  
+        setLoading(true); // Ensure loading starts before async calls
+  
+        // Fetch establishments
+        const fetchedEstablishments = await fetchEstablishments();
+  
+        // Fetch location
+        const location = await getUserLocation();
+  
+        if (location) {
+          const establishmentsWithDistance = calculateDistances(location, fetchedEstablishments);
+          setEstablishments(establishmentsWithDistance);
+        } else {
+          setEstablishments(fetchedEstablishments); // Use establishments without distance
+        }
+      } catch (error) {
+        console.error("Initialization error:", error); // Log any unexpected errors
+      } finally {
+        setLoading(false); // Ensure loading is stopped in both success and failure cases
       }
-      setLoading(false);
     };
-
+  
     initialize();
   }, []);
+
 
   // Normalize the time for comparison
   const normalizeTime = (time: string) => {

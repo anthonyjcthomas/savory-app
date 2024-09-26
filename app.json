@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "saveory",
+    "name": "Saveory",
     "slug": "saveory",
     "jsEngine": "hermes",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./newappicon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "splash": {
@@ -18,11 +18,13 @@
       "infoPlist": {
         "UIBackgroundModes": ["location"],
         "NSLocationWhenInUseUsageDescription": "We need access to your location to show nearby deals and businesses.",
-        "NSLocationAlwaysUsageDescription": "We need access to your location in the background to keep updating the deals near you."
+        "NSLocationAlwaysUsageDescription": "We need access to your location in the background to keep updating the deals near you.",
+        "NSUserTrackingUsageDescription": "We use your data to provide personalized deals and promotions relevant to you.",
+        "buildNumber": "11",
+      "icon": "./newappicon.png"
       },
       "bundleIdentifier": "com.anthonyjcthomas.Saveory",
-      "buildNumber": "3",
-      "icon": "NEW_APP_LOGO.png"
+      "icon": "newappicon.png"
     },
     "android": {
       "adaptiveIcon": {
