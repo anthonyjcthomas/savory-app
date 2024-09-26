@@ -1,5 +1,5 @@
 import { collection, getDocs } from "firebase/firestore"; // Firestore imports
-import { db } from '../firebaseConfig'; // Firebase Firestore config
+import { db } from '../firebaseConfig.js'; // Firebase Firestore config
 import { FlatList, StyleSheet, Text, TouchableOpacity, View, Image, ListRenderItem, Dimensions, ActivityIndicator } from "react-native";
 import React, { useEffect, useState } from 'react';
 import * as Location from 'expo-location';

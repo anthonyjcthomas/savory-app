@@ -7,7 +7,7 @@ import { useHeaderHeight } from '@react-navigation/elements';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { query, collection, getDocs } from "firebase/firestore"; // Firestore imports
-import { db } from '../../firebaseConfig'; // Firebase Firestore config
+import { db } from '../../firebaseConfig.js'; // Firebase Firestore config
 import { requestTrackingPermission } from 'react-native-tracking-transparency'; // Import the tracking transparency API
 
 const SearchPage = () => {

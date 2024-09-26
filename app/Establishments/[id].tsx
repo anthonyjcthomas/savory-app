@@ -4,8 +4,8 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { getAuth } from "firebase/auth";
 import { query, collection, where, getDocs } from "firebase/firestore";
-import { db } from '../../firebaseConfig'; // Firebase Firestore config
-import CommentsSection from './CommentsSection';
+import { db } from '../../firebaseConfig.js';
+import CommentsSection from './CommentsSection.tsx';
 
 const { width } = Dimensions.get('window');
 const IMG_HEIGHT = 300;
@@ -62,6 +62,14 @@ const EstablishmentDetails: React.FC = () => {
         );
     }
 
+    if (!establishment) {
+        return (
+            <View style={styles.container}>
+                <Text>Establishment not found.</Text>
+            </View>
+        );
+    }
+
     // Handle sharing the happy hour details
     const handleShare = async () => {
         try {
@@ -84,6 +92,20 @@ const EstablishmentDetails: React.FC = () => {
         });
     };
 
+    const handleReportOutdatedHappyHour = () => {
+        if (user && user.email) {
+            const subject = encodeURIComponent(`Incorrect happy hour for ${establishment.name}`);
+            const body = encodeURIComponent(`Dear Support,\n\nI noticed that the happy hour details for ${establishment.name} seem to be incorrect. Please review and update them if necessary.\n\nThank you,\n${user.email}`);
+            const emailUrl = `mailto:saveoryapp@gmail.com?subject=${subject}&body=${body}`;
+            Linking.openURL(emailUrl).catch(err => {
+                Alert.alert("Error", "Failed to open email client.");
+                console.error("Error sending email: ", err);
+            });
+        } else {
+            Alert.alert("Error", "You need to be logged in to report.");
+        }
+    };
+
     return (
         <>
             <Stack.Screen options={{
@@ -100,7 +122,7 @@ const EstablishmentDetails: React.FC = () => {
             <View style={styles.container2}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.customBackButton}>
                     <Feather name='arrow-left' size={20} color="#fff" />
-                    <Text style={styles.customBackButtonText}>Back </Text>
+                    <Text style={styles.customBackButtonText}>Back</Text>
                 </TouchableOpacity>
 
                 <Image source={{ uri: establishment.image }} style={styles.image} />
@@ -151,6 +173,22 @@ const EstablishmentDetails: React.FC = () => {
                         </View>
                         <Text style={styles.establishmentDetails}>{establishment.description}</Text>
                     </View>
+
+                    {/* Outdated Button and Happy Hour Details */}
+                    <View style={styles.footer}>
+                        <TouchableOpacity style={styles.outdatedButton} onPress={handleReportOutdatedHappyHour}>
+                            <Text style={styles.outdatedButtonText}>Outdated?</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.footerTitle}>Happy Hours</Text>
+                        {establishment.happy_hour_deals.map((deal, index) => (
+                            <View key={index} style={styles.happyHourDeal}>
+                                <Text style={styles.happyHourDay}>{deal.day}:</Text>
+                                <Text style={styles.happyHourText}>{deal.details}</Text>
+                            </View>
+                        ))}
+                    </View>
+
+                    {/* Comments Section */}
                     <CommentsSection establishmentId={id} />
                 </ScrollView>
             </View>
@@ -165,38 +203,6 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    titleRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between', // Ensures the title and share button are on opposite sides
-        alignItems: 'center',
-        marginTop: 10, // Add spacing between title and the next element (like rating)
-    },
-    shareButton: {
-        padding: 8,
-        backgroundColor: '#f0f0f0',
-        borderRadius: 10,
-    },
-    highlightRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginVertical: 20,
-    },
-    highlightWrapper: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    highlightIcon: {
-        marginRight: 10,
-    },
-    HighlightText: {
-        fontSize: 16,
-        color: '#264117',
-    },
-    HighlightTextVal: {
-        fontSize: 14,
-        color: '#7a7a7a',
     },
     loadingContainer: {
         flex: 1,
@@ -221,6 +227,17 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "#f5f5f5",
     },
+    titleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    shareButton: {
+        padding: 8,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 10,
+    },
     establishmentName: {
         fontSize: 24,
         fontWeight: '500',
@@ -238,38 +255,28 @@ const styles = StyleSheet.create({
         marginLeft: 5,
         color: '#264117',
     },
-    headerButton: {
-        backgroundColor: "#ffffff",
-        borderRadius: 10,
-        padding: 4,
-    },
-    iconWrapper: {
-        backgroundColor: '#ffffff',
-        padding: 6,
-        borderRadius: 10,
-    },
-    outdatedButton: {
-        backgroundColor: '#264117',
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 20,
-        width: '40%',
+    highlightRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
+        marginVertical: 20,
     },
-    outdatedButtonText: {
-        color: '#ffffff',
-        fontSize: 16,
-        fontWeight: '600',
+    highlightWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
-    establishmentDetails: {
+    highlightIcon: {
+        marginRight: 10,
+    },
+    HighlightText: {
         fontSize: 16,
-        color: "#264117",
-        lineHeight: 25,
-        letterSpacing: 0.5,
+        color: '#264117',
+    },
+    HighlightTextVal: {
+        fontSize: 14,
+        color: '#7a7a7a',
     },
     footer: {
-        backgroundColor: '#f5f5f5',
         padding: 20,
         borderTopWidth: 1,
         borderTopColor: '#dcdcdc',
@@ -286,7 +293,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         alignItems: 'flex-start',
         flexDirection: 'row',
-        flexWrap: 'wrap'
+        flexWrap: 'wrap',
     },
     happyHourDay: {
         fontSize: 20,
@@ -295,43 +302,37 @@ const styles = StyleSheet.create({
         marginRight: 5,
     },
     happyHourText: {
-        top: 5,
         fontSize: 16,
         color: '#264117',
     },
-    skeletoncontainer: {
-        flex: 1,
-        padding: 20,
-        backgroundColor: '#fff',
-      },
-      skeletonheader: {
-        height: 20,
-        width: width - 40,
-        backgroundColor: '#e1e1e1',
-        marginBottom: 10,
-      },
+    outdatedButton: {
+        backgroundColor: '#264117',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        width: '40%',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    outdatedButtonText: {
+        color: '#ffffff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
     customBackButton: {
         position: 'absolute',
-        top: 40, // Adjust this value to move the button down or up
+        top: 40,
         left: 20,
         backgroundColor: '#264117',
         padding: 10,
         borderRadius: 20,
         flexDirection: 'row',
         alignItems: 'center',
-        zIndex: 1, // Make sure it's on top of the content
+        zIndex: 1,
     },
     customBackButtonText: {
         color: '#fff',
         marginLeft: 8,
         fontSize: 16,
     },
-      skeletonbody: {
-        flex: 1,
-      },
-      skeletonblock: {
-        height: 100,
-        backgroundColor: '#e1e1e1',
-        marginBottom: 10,
-      },
 });

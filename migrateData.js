@@ -1,5 +1,5 @@
 import { collection, setDoc, doc, writeBatch } from "firebase/firestore"; // Firestore imports
-import { db, auth } from './firebaseConfigNode.js'; // Firebase config import
+import { db, auth } from './firebaseConfig'; // Firebase config import
 import { signInWithEmailAndPassword } from "firebase/auth"; // Import Firebase authentication
 
 

@@ -7,7 +7,7 @@ import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { EstablishmentType, HappyHourDeal } from '@/types/establishmentType';
 import Categories from "@/components/Categories";
 import * as Location from 'expo-location';
-import { db } from '@/firebaseConfig'; // Adjust the path as necessary
+import { db } from '../../firebaseConfig.js'; // Adjust the path as necessary
 import { collection, getDocs } from 'firebase/firestore';
 
 const Live = () => {

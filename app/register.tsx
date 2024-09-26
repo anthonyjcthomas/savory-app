@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, Alert, View, Text } from 'react-native';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';  // Import setDoc and doc
-import { db } from '@/firebaseConfig'; // Make sure to import your firestore instance
+import { db } from '@/firebaseConfig.js'; // Make sure to import your firestore instance
 import {router } from 'expo-router';
 
 export default function RegisterScreen() {

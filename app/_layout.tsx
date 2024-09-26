@@ -5,7 +5,7 @@ import { ThemeProvider, DefaultTheme, DarkTheme } from '@react-navigation/native
 import { useColorScheme } from '@/components/useColorScheme';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { BookmarksProvider } from '@/components/BookmarksContext';
-import { auth } from '@/firebaseConfig';
+import { auth } from '../firebaseConfig.js';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
