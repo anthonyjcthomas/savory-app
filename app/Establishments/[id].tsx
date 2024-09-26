@@ -1,51 +1,15 @@
-import { query, collection, where, getDocs } from "firebase/firestore";
-import { getDoc, doc } from "firebase/firestore"; // Firestore imports
-import { db } from '../../firebaseConfig'; // Firebase Firestore config
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Image, Text, TouchableOpacity, Linking, Dimensions, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Image, Text, TouchableOpacity, Linking, Dimensions, Alert, ScrollView, ActivityIndicator, Share } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather, FontAwesome5, Ionicons } from "@expo/vector-icons";
-import { EstablishmentType } from "@/types/establishmentType";
 import { getAuth } from "firebase/auth";
+import { query, collection, where, getDocs } from "firebase/firestore";
+import { db } from '../../firebaseConfig'; // Firebase Firestore config
 import CommentsSection from './CommentsSection';
 
 const { width } = Dimensions.get('window');
 const IMG_HEIGHT = 300;
 
-const SkeletonPlaceholder = () => (
-    <View style={styles.skeletoncontainer}>
-      <View style={styles.skeletonheader} />
-      <View style={styles.skeletonbody}>
-        {[1, 2, 3].map((_, index) => (
-          <View key={index} style={styles.skeletonblock} />
-        ))} 
-      </View>
-    </View>
-  );
-// Handle sending an email report for outdated happy hour details
-const handleReportOutdatedHappyHour = (establishment, user) => {
-    if (user && user.email) {
-        const subject = encodeURIComponent(`Incorrect happy hour for ${establishment.name}`);
-        const body = encodeURIComponent(`Dear Support,\n\nI noticed that the happy hour details for ${establishment.name} seem to be incorrect. Please review and update them if necessary.\n\nThank you,\n${user.email}`);
-        const emailUrl = `mailto:saveoryapp@gmail.com?subject=${subject}&body=${body}`;
-
-        Linking.canOpenURL(emailUrl)
-            .then((supported) => {
-                if (!supported) {
-                    Alert.alert('Error', 'No email client configured. Please set up an email app.');
-                } else {
-                    Linking.openURL(emailUrl);
-                }
-            })
-            .catch((err) => {
-                console.error('Error sending email:', err);
-                Alert.alert('Error', 'An error occurred while trying to send the email.');
-            });
-    } else {
-        Alert.alert('Error', 'No logged-in user found.');
-    }
-};
-  
 const EstablishmentDetails: React.FC = () => {
     const { id } = useLocalSearchParams<{ id: string }>();  // Get the document ID from the URL params
     const router = useRouter();
@@ -61,25 +25,21 @@ const EstablishmentDetails: React.FC = () => {
             router.back();
             return;
         }
-    
+
         try {
-            console.log("Fetching establishment with id:", id);
             const establishmentsRef = collection(db, "establishments");
             const q = query(establishmentsRef, where("id", "==", id)); // Use the internal 'id' field
             const querySnapshot = await getDocs(q);
-    
+
             if (!querySnapshot.empty) {
                 const establishmentData = querySnapshot.docs[0].data(); // Assuming only one document will match
-                console.log("Document data:", establishmentData);
                 setEstablishment({ ...establishmentData, id: querySnapshot.docs[0].id } as EstablishmentType);
             } else {
-                console.log("No such document!");
                 Alert.alert("Error", "Establishment not found.");
                 setEstablishment(null);
                 router.back();
             }
         } catch (error) {
-            console.error("Error fetching document:", error);
             Alert.alert("Error", "Failed to fetch establishment details.");
             setEstablishment(null);
             router.back();
@@ -101,6 +61,20 @@ const EstablishmentDetails: React.FC = () => {
             </View>
         );
     }
+
+    // Handle sharing the happy hour details
+    const handleShare = async () => {
+        try {
+            const message = `Check out the happy hour at ${establishment.name} located at ${establishment.location}.\n\nHappy Hour Details:\n${establishment.happy_hour_deals.map(deal => `${deal.day}: ${deal.details}`).join('\n\n')}`;
+            
+            await Share.share({
+                message,
+            });
+        } catch (error) {
+            Alert.alert('Error', 'Failed to share the happy hour details.');
+            console.error("Error sharing happy hour details: ", error);
+        }
+    };
 
     const openMaps = () => {
         const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.name + ', ' + establishment.location)}`;
@@ -124,10 +98,10 @@ const EstablishmentDetails: React.FC = () => {
                 )
             }} />
             <View style={styles.container2}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.customBackButton}>
-                <Feather name='arrow-left' size={20} color="#fff" />
-                <Text style={styles.customBackButtonText}>Back </Text>
-            </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.back()} style={styles.customBackButton}>
+                    <Feather name='arrow-left' size={20} color="#fff" />
+                    <Text style={styles.customBackButtonText}>Back </Text>
+                </TouchableOpacity>
 
                 <Image source={{ uri: establishment.image }} style={styles.image} />
                 <ScrollView
@@ -135,7 +109,12 @@ const EstablishmentDetails: React.FC = () => {
                     showsVerticalScrollIndicator={false}
                 >
                     <View style={styles.contentWrapper}>
-                        <Text style={styles.establishmentName}>{establishment.name}</Text>
+                        <View style={styles.titleRow}>
+                            <Text style={styles.establishmentName}>{establishment.name}</Text>
+                            <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
+                                <Feather name="share-2" size={24} color="#264117" />
+                            </TouchableOpacity>
+                        </View>
                         <View style={styles.establishmentLocationWrapper}>
                             <FontAwesome5 name="map-marker-alt" size={18} color='#264117' />
                             <Text style={styles.establishmentLocationText}> {establishment.location}</Text>
@@ -172,22 +151,6 @@ const EstablishmentDetails: React.FC = () => {
                         </View>
                         <Text style={styles.establishmentDetails}>{establishment.description}</Text>
                     </View>
-
-                    <View style={styles.footer}>
-                    <TouchableOpacity
-    style={styles.outdatedButton}
-    onPress={() => handleReportOutdatedHappyHour(establishment, user)} // Make sure 'establishment' and 'user' are properly defined in the component's scope
->
-    <Text style={styles.outdatedButtonText}>Outdated?</Text>
-</TouchableOpacity>
-                        <Text style={styles.footerTitle}>Happy Hours</Text>
-                        {establishment.happy_hour_deals.map((deal, index) => (
-                            <View key={index} style={styles.happyHourDeal}>
-                                <Text style={styles.happyHourDay}>{deal.day}:</Text>
-                                <Text style={styles.happyHourText}>{deal.details}</Text>
-                            </View>
-                        ))}
-                    </View>
                     <CommentsSection establishmentId={id} />
                 </ScrollView>
             </View>
@@ -202,6 +165,38 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    titleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between', // Ensures the title and share button are on opposite sides
+        alignItems: 'center',
+        marginTop: 10, // Add spacing between title and the next element (like rating)
+    },
+    shareButton: {
+        padding: 8,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 10,
+    },
+    highlightRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginVertical: 20,
+    },
+    highlightWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    highlightIcon: {
+        marginRight: 10,
+    },
+    HighlightText: {
+        fontSize: 16,
+        color: '#264117',
+    },
+    HighlightTextVal: {
+        fontSize: 14,
+        color: '#7a7a7a',
     },
     loadingContainer: {
         flex: 1,
@@ -235,7 +230,7 @@ const styles = StyleSheet.create({
     establishmentLocationWrapper: {
         flexDirection: 'row',
         marginTop: 5,
-        marginBottom: 10,
+        marginBottom: 0,
         alignItems: 'center',
     },
     establishmentLocationText: {
@@ -252,27 +247,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#ffffff',
         padding: 6,
         borderRadius: 10,
-    },
-    highlightRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginVertical: 20,
-    },
-    highlightWrapper: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    highlightIcon: {
-        marginRight: 10,
-    },
-    HighlightText: {
-        fontSize: 16,
-        color: '#264117',
-    },
-    HighlightTextVal: {
-        fontSize: 14,
-        color: '#7a7a7a',
     },
     outdatedButton: {
         backgroundColor: '#264117',
