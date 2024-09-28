@@ -1,8 +1,9 @@
 import { Button, StyleSheet, TextInput, TouchableOpacity, Alert } from "react-native";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, signInAnonymously, deleteUser } from "firebase/auth";
 import { Text, View } from "@/components/Themed";
 import { useState } from "react";
 import { router } from "expo-router";
+import { Ionicons } from '@expo/vector-icons'; // Ensure you have this library installed
 
 export default function LoginScreen() {
   const [email, setEmail] = useState<string>("");
@@ -19,7 +20,17 @@ export default function LoginScreen() {
   };
 
   const handleSignUpRedirect = () => {
-    router.back(); // Go back to the previous screen
+    router.back(); // Go back to the previous screen (assumed to be signup)
+  };
+
+  const handleGuestLogin = () => {
+    signInAnonymously(getAuth())
+      .then(() => {
+        router.replace("/(tabs)");
+      })
+      .catch((error) => {
+        Alert.alert('Login Error', "Unable to continue as guest");
+      });
   };
 
   return (
@@ -46,11 +57,21 @@ export default function LoginScreen() {
         secureTextEntry
       />
 
-<TouchableOpacity style={styles.button} onPress={handleLogin}>
+      <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={handleSignUpRedirect}>
-        <Text style={styles.linkText}>Don't have an account? Sign Up</Text>
+
+      <TouchableOpacity style={styles.guestButton} onPress={handleGuestLogin}>
+        <Text style={styles.buttonText}>Continue as Guest</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.backButton} onPress={handleSignUpRedirect}>
+        <Ionicons name="arrow-back" size={24} color="white" />
+        <Text style={styles.backButtonText}>Back to Signup</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.deleteButton} onPress={() => router.push('/DeleteAccount')}>
+        <Text style={styles.deleteText}>Delete Account</Text>
       </TouchableOpacity>
     </View>
   );
@@ -98,8 +119,35 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 16,
   },
+  guestButton: {
+    width: "100%",
+    padding: 15,
+    backgroundColor: "#ffffff", // White background for guest button
+    borderRadius: 10,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  backButtonText: {
+    color: "#ffffff", // White text for back to signup
+    fontSize: 16,
+    marginLeft: 5,
+  },
   linkText: {
-    color: "#264117", // White text
+    color: "#264117", // Dark green text
+    fontSize: 16,
+    textDecorationLine: "underline",
+  },
+  deleteButton: {
+    marginTop: 30,
+    alignItems: "center",
+  },
+  deleteText: {
+    color: "#FF0000", // Red text for delete account
     fontSize: 16,
     textDecorationLine: "underline",
   },

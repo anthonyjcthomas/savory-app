@@ -7,39 +7,38 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import { router } from 'expo-router';
-import { getAuth, signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
+import { router, useNavigation } from 'expo-router';
+import { getAuth, signInWithEmailAndPassword, deleteUser } from 'firebase/auth';
 
-export default function Landing() {
+export default function DeleteAccount() {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const auth = getAuth();
 
-  const handleLogin = () => {
+  useNavigation().setOptions({ headerShown: false }); // Hides the header
+
+  const handleDeleteAccount = () => {
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
-        // Login successful
-        router.replace('/(tabs)'); // Navigate to the main app
+        const user = userCredential.user;
+        deleteUser(user)
+          .then(() => {
+            Alert.alert('Account Deleted', 'The account has been successfully deleted.');
+            router.replace('/landing'); // Navigate back to login screen after deletion
+          })
+          .catch((error) => {
+            Alert.alert('Delete Error', 'Unable to delete the account. Please try again.');
+          });
       })
       .catch((error) => {
-        Alert.alert('Login Error', "Incorrect Username or Password");
-      });
-  };
-
-  const handleGuestLogin = () => {
-    signInAnonymously(auth)
-      .then(() => {
-        router.replace('/(tabs)');
-      })
-      .catch((error) => {
-        Alert.alert('Guest Login Error', 'Unable to continue as guest');
+        Alert.alert('Delete Error', 'Incorrect email or password.');
       });
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome to Saveory!</Text>
-      <Text style={styles.subtitle}>Log in to continue</Text>
+      <Text style={styles.title}>Delete Account</Text>
+      <Text style={styles.subtitle}>Enter your email and password to delete your account</Text>
 
       <TextInput
         style={styles.input}
@@ -60,20 +59,12 @@ export default function Landing() {
         secureTextEntry
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Log In</Text>
+      <TouchableOpacity style={styles.button} onPress={handleDeleteAccount}>
+        <Text style={styles.buttonText}>Delete Account</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.guestButton} onPress={handleGuestLogin}>
-        <Text style={styles.buttonText}>Continue as Guest</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => router.push('/register')}>
-        <Text style={styles.linkText}>Don't have an account? Sign Up</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.deleteButton} onPress={() => router.push('/DeleteAccount')}>
-        <Text style={styles.deleteText}>Delete Account</Text>
+      <TouchableOpacity onPress={() => router.back()}>
+        <Text style={styles.linkText}>Back to Login</Text>
       </TouchableOpacity>
     </View>
   );
@@ -111,35 +102,18 @@ const styles = StyleSheet.create({
   button: {
     width: '100%',
     padding: 15,
-    backgroundColor: '#ffffff', // White background
+    backgroundColor: '#FF0000', // Red background for delete button
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 20,
   },
   buttonText: {
-    color: '#264117', // Dark green text
+    color: '#ffffff', // White text
     fontWeight: '600',
     fontSize: 16,
   },
-  guestButton: {
-    width: '100%',
-    padding: 15,
-    backgroundColor: '#ffffff', // White background for guest button
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
   linkText: {
     color: '#ffffff', // White text
-    fontSize: 16,
-    textDecorationLine: 'underline',
-  },
-  deleteButton: {
-    marginTop: 30,
-    alignItems: 'center',
-  },
-  deleteText: {
-    color: '#FF0000', // Red text for delete account
     fontSize: 16,
     textDecorationLine: 'underline',
   },
