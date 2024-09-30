@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
         flexDirection: 'column',
     },
     headerImage: {
-        marginTop: 44,
+        marginTop: 38,
         width: 40,
         height: 40,
         borderRadius: 20,

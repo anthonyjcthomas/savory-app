@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         left: '50%',
         transform: [{ translateX: -20 }],
-        marginTop: 57,
+        marginTop: 56,
     },
     marker: {
         alignItems: 'center',

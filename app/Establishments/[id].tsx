@@ -73,7 +73,7 @@ const EstablishmentDetails: React.FC = () => {
     // Handle sharing the happy hour details
     const handleShare = async () => {
         try {
-            const message = `Check out the happy hour at ${establishment.name} located at ${establishment.location}.\n\nHappy Hour Details:\n${establishment.happy_hour_deals.map(deal => `${deal.day}: ${deal.details}`).join('\n\n')}`;
+            const message = `Check out the happy hour at ${establishment.name} that I found on Saveory.\n\nHappy Hour Details:\n${establishment.happy_hour_deals.map(deal => `${deal.day}: ${deal.details}`).join('\n\n')}`;
             
             await Share.share({
                 message,
@@ -176,9 +176,7 @@ const EstablishmentDetails: React.FC = () => {
 
                     {/* Outdated Button and Happy Hour Details */}
                     <View style={styles.footer}>
-                        <TouchableOpacity style={styles.outdatedButton} onPress={handleReportOutdatedHappyHour}>
-                            <Text style={styles.outdatedButtonText}>Outdated?</Text>
-                        </TouchableOpacity>
+                        
                         <Text style={styles.footerTitle}>Happy Hours</Text>
                         {establishment.happy_hour_deals.map((deal, index) => (
                             <View key={index} style={styles.happyHourDeal}>
@@ -189,6 +187,9 @@ const EstablishmentDetails: React.FC = () => {
                     </View>
 
                     {/* Comments Section */}
+                    <TouchableOpacity style={styles.outdatedButton} onPress={handleReportOutdatedHappyHour}>
+                            <Text style={styles.outdatedButtonText}>Outdated?</Text>
+                        </TouchableOpacity>
                     <CommentsSection establishmentId={id} />
                 </ScrollView>
             </View>
