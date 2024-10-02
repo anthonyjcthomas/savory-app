@@ -10,6 +10,7 @@ import { useBookmarks } from '@/components/BookmarksContext';
 import { SharedElement } from 'react-navigation-shared-element';
 import moment from 'moment'; 
 import { requestTrackingPermission } from 'react-native-tracking-transparency';
+import { amplitude } from "../firebaseConfig.js";
 
 type Props = {
   category: string;
@@ -187,6 +188,10 @@ const Establishments = ({ category, dotw, selectedHour, sortedByDistance }: Prop
       removeBookmark(establishment.id);
     } else {
       addBookmark(establishment);
+      amplitude.track('bookmarked', {
+        establishmentId: establishment.id,
+        establishmentName: establishment
+    });
     }
   };
 

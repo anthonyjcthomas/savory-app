@@ -7,7 +7,7 @@ import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { Link } from 'expo-router';
 import { requestTrackingPermission } from 'react-native-tracking-transparency'; // Add this import
-
+import { amplitude } from '@/firebaseConfig';
 
 const { width } = Dimensions.get('window');
 

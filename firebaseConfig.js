@@ -2,7 +2,9 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as amplitude from '@amplitude/analytics-react-native';
 
+amplitude.init('bd807e3906186c97dbf67b68ee246925');
 // Firebase configuration
 const firebaseConfig = {
   apiKey: 'AIzaSyComESbHKEd4ZbMghb-r8FAOWRXWntKUVY',
@@ -13,6 +15,7 @@ const firebaseConfig = {
   measurementId: 'G-RHZSMDGB2K',
 };
 
+
 // Initialize Firebase app if it hasn't been initialized yet
 let app;
 if (getApps().length === 0) {
@@ -21,12 +24,9 @@ if (getApps().length === 0) {
   app = getApp(); // Use the existing initialized app
 }
 
-// Initialize Firebase Auth with persistence
 const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage),
 });
-
-// Initialize Firestore
 const db = getFirestore(app);
 
-export { auth, db };
+export { auth, db, amplitude };

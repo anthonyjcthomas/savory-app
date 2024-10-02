@@ -4,7 +4,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { getAuth } from "firebase/auth";
 import { query, collection, where, getDocs } from "firebase/firestore";
-import { db } from '../../firebaseConfig.js';
+import { db, amplitude } from '../../firebaseConfig.js';
 import CommentsSection from './CommentsSection.tsx';
 
 const { width } = Dimensions.get('window');
@@ -17,78 +17,119 @@ const EstablishmentDetails: React.FC = () => {
     const [loading, setLoading] = useState(true); // Track loading state
     const auth = getAuth();
     const user = auth.currentUser;
+    let startTime: number;
 
     // Function to fetch establishment based on Firestore document ID
     const fetchEstablishment = async () => {
         if (!id) {
-            Alert.alert("Error", "No establishment ID provided.");
-            router.back();
-            return;
+          Alert.alert("Error", "No establishment ID provided.");
+          router.back();
+          return;
         }
-
+      
         try {
-            const establishmentsRef = collection(db, "establishments");
-            const q = query(establishmentsRef, where("id", "==", id)); // Use the internal 'id' field
-            const querySnapshot = await getDocs(q);
+          const establishmentsRef = collection(db, "establishments");
+          const q = query(establishmentsRef, where("id", "==", id));  // Ensure you're querying the correct field
+          const querySnapshot = await getDocs(q);
+      
+          if (!querySnapshot.empty) {
+            const establishmentData = querySnapshot.docs[0].data();  // Assuming one document will match
+            const establishmentId = querySnapshot.docs[0].id;
+      
+            setEstablishment({ ...establishmentData, id: establishmentId });
 
-            if (!querySnapshot.empty) {
-                const establishmentData = querySnapshot.docs[0].data(); // Assuming only one document will match
-                setEstablishment({ ...establishmentData, id: querySnapshot.docs[0].id } as EstablishmentType);
-            } else {
-                Alert.alert("Error", "Establishment not found.");
-                setEstablishment(null);
-                router.back();
-            }
-        } catch (error) {
-            Alert.alert("Error", "Failed to fetch establishment details.");
+            // Track the view event with Amplitude
+            amplitude.track('view_establishment', {
+                establishmentId: establishmentId,
+                establishmentName: establishmentData.name,
+            });
+
+            console.log("View event logged to Amplitude for", establishmentData.name);
+          } else {
+            Alert.alert("Error", "Establishment not found.");
             setEstablishment(null);
             router.back();
+          }
+        } catch (error) {
+          console.error("Error fetching establishment details:", error);  // Log the error for debugging
+          Alert.alert("Error", "Failed to fetch establishment details.");
+          setEstablishment(null);
+          router.back();
         } finally {
-            setLoading(false);
+          setLoading(false);
         }
-    };
-
-    // Fetch the establishment when component mounts or ID changes
+      };
+    
+    // Record start time when the component mounts
     useEffect(() => {
+        const currentTime = Date.now(); // Record the start time
+        startTime = currentTime;
         fetchEstablishment();
-    }, [id]);
+    
+        return () => {
+            const endTime = Date.now(); // Record the end time
+            const timeSpent = (endTime - startTime) / 1000; // Time spent in seconds
+    
+            if (establishment) { // Ensure establishment is not null
+                // Track the time spent event with Amplitude
+                amplitude.track('time_spent_on_page', {
+                    establishmentName: establishment.name,
+                    timeSpent, // Duration in seconds
+                });
+    
+                console.log(`Time spent on page: ${timeSpent} seconds for ${establishment.name}`);
+            }
+        };
+    }, [id, establishment]);
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#264117" />
-                <Text>Loading establishment details...</Text>
-            </View>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#264117" />
+            <Text>Loading establishment details...</Text>
+          </View>
         );
-    }
-
+      }
+    
     if (!establishment) {
         return (
-            <View style={styles.container}>
-                <Text>Establishment not found.</Text>
-            </View>
+          <View style={styles.container}>
+            <Text>Establishment not found.</Text>
+          </View>
         );
-    }
+      }
 
     // Handle sharing the happy hour details
     const handleShare = async () => {
         try {
-            const message = `Check out the happy hour at ${establishment.name} that I found on Saveory.\n\nHappy Hour Details:\n${establishment.happy_hour_deals.map(deal => `${deal.day}: ${deal.details}`).join('\n\n')}`;
-            
+            const message = `Check out the happy hour at ${establishment.name} that I found on Saveory!`;
+
             await Share.share({
                 message,
             });
+
+            // Track the share event with Amplitude
+            amplitude.track('share_establishment', {
+                establishmentId: establishment.id,
+                establishmentName: establishment.name,
+            });
+
+            console.log("Share event logged to Amplitude for", establishment.name);
         } catch (error) {
-            Alert.alert('Error', 'Failed to share the happy hour details.');
-            console.error("Error sharing happy hour details: ", error);
+            Alert.alert('Error', 'Failed to share the establishment.');
         }
     };
-
+      
     const openMaps = () => {
         const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(establishment.name + ', ' + establishment.location)}`;
         Linking.openURL(url).catch(err => {
-            console.error("Error opening maps:", err);
             Alert.alert("Error", "Failed to open maps.");
+        });
+
+        // Track the open maps event
+        amplitude.track('click_open_maps', {
+            establishmentId: establishment.id,
+            establishmentName: establishment.name,
         });
     };
 
@@ -176,7 +217,6 @@ const EstablishmentDetails: React.FC = () => {
 
                     {/* Outdated Button and Happy Hour Details */}
                     <View style={styles.footer}>
-                        
                         <Text style={styles.footerTitle}>Happy Hours</Text>
                         {establishment.happy_hour_deals.map((deal, index) => (
                             <View key={index} style={styles.happyHourDeal}>
@@ -189,7 +229,7 @@ const EstablishmentDetails: React.FC = () => {
                     {/* Comments Section */}
                     <TouchableOpacity style={styles.outdatedButton} onPress={handleReportOutdatedHappyHour}>
                             <Text style={styles.outdatedButtonText}>Outdated?</Text>
-                        </TouchableOpacity>
+                    </TouchableOpacity>
                     <CommentsSection establishmentId={id} />
                 </ScrollView>
             </View>
@@ -198,6 +238,7 @@ const EstablishmentDetails: React.FC = () => {
 };
 
 export default EstablishmentDetails;
+
 
 const styles = StyleSheet.create({
     container: {

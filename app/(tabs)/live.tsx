@@ -9,6 +9,7 @@ import Categories from "@/components/Categories";
 import * as Location from 'expo-location';
 import { db } from '../../firebaseConfig.js'; // Adjust the path as necessary
 import { collection, getDocs } from 'firebase/firestore';
+import { amplitude } from '../../firebaseConfig.js';
 
 const Live = () => {
     const headerHeight = useHeaderHeight();
@@ -126,10 +127,19 @@ const Live = () => {
 
     // Initial data fetch and setup
     useEffect(() => {
+        const trackEstablishmentViews = (establishments: EstablishmentType[]) => {
+            establishments.forEach(establishment => {
+                amplitude.track('view_establishment', {
+                    establishmentId: establishment.id,
+                    establishmentName: establishment.name,
+                });
+            });
+        };
         const initialize = async () => {
             setInitialLoading(true);
             const fetchedEstablishments = await fetchEstablishments();
             filterActiveDeals(fetchedEstablishments);
+            trackEstablishmentViews(fetchedEstablishments);
             setInitialLoading(false);
         };
 
@@ -142,6 +152,10 @@ const Live = () => {
         Linking.openURL(url).catch(err => {
             console.error("Error opening maps:", err);
             Alert.alert("Error", "Failed to open maps.");
+        });
+        // Track the open maps event with Amplitude
+        amplitude.track('click_open_maps', {
+            establishmentName: name,
         });
     };
 
