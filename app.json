@@ -5,7 +5,7 @@
     "jsEngine": "hermes",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./newappicon.png",
+    "icon": "./SaveoryLogo.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "splash": {
