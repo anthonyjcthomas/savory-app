@@ -102,8 +102,7 @@ const EstablishmentDetails: React.FC = () => {
     // Handle sharing the happy hour details
     const handleShare = async () => {
         try {
-            const message = `Check out the happy hour at ${establishment.name} that I found on Saveory!`;
-
+            const message = `Check out the happy hour at ${establishment.name} located at ${establishment.location}.\n\nHappy Hour Details:\n${establishment.happy_hour_deals.map(deal => `${deal.day}: ${deal.details}`).join('\n\n')}`;
             await Share.share({
                 message,
             });
