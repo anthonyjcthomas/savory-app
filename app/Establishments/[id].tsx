@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Image, Text, TouchableOpacity, Linking, Dimensions, Alert, ScrollView, ActivityIndicator, Share } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather, FontAwesome5, Ionicons } from "@expo/vector-icons";
@@ -11,93 +11,96 @@ const { width } = Dimensions.get('window');
 const IMG_HEIGHT = 300;
 
 const EstablishmentDetails: React.FC = () => {
-    const { id } = useLocalSearchParams<{ id: string }>();  // Get the document ID from the URL params
+    const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
     const [establishment, setEstablishment] = useState<EstablishmentType | null>(null);
-    const [loading, setLoading] = useState(true); // Track loading state
+    const [loading, setLoading] = useState(true);
+    const startTimeRef = useRef<number | null>(null);
     const auth = getAuth();
     const user = auth.currentUser;
-    let startTime: number;
 
-    // Function to fetch establishment based on Firestore document ID
+    // Fetch establishment details from Firestore
     const fetchEstablishment = async () => {
+        console.log("Fetching establishment details...");
         if (!id) {
-          Alert.alert("Error", "No establishment ID provided.");
-          router.back();
-          return;
+            Alert.alert("Error", "No establishment ID provided.");
+            router.back();
+            return;
         }
-      
+
         try {
-          const establishmentsRef = collection(db, "establishments");
-          const q = query(establishmentsRef, where("id", "==", id));  // Ensure you're querying the correct field
-          const querySnapshot = await getDocs(q);
-      
-          if (!querySnapshot.empty) {
-            const establishmentData = querySnapshot.docs[0].data();  // Assuming one document will match
-            const establishmentId = querySnapshot.docs[0].id;
-      
-            setEstablishment({ ...establishmentData, id: establishmentId });
+            const establishmentsRef = collection(db, "establishments");
+            const q = query(establishmentsRef, where("id", "==", id));
+            const querySnapshot = await getDocs(q);
 
-            // Track the view event with Amplitude
-            amplitude.track('view_establishment', {
-                establishmentId: establishmentId,
-                establishmentName: establishmentData.name,
-            });
+            if (!querySnapshot.empty) {
+                const establishmentData = querySnapshot.docs[0].data();
+                const establishmentId = querySnapshot.docs[0].id;
 
-            console.log("View event logged to Amplitude for", establishmentData.name);
-          } else {
-            Alert.alert("Error", "Establishment not found.");
+                setEstablishment({ ...establishmentData, id: establishmentId });
+
+                console.log("Establishment fetched:", establishmentData.name);
+
+                // Track view event after fetching
+                amplitude.track('view_establishment', {
+                    establishmentId: establishmentId,
+                    establishmentName: establishmentData.name,
+                });
+
+                console.log("View event logged to Amplitude for", establishmentData.name);
+            } else {
+                Alert.alert("Error", "Establishment not found.");
+                setEstablishment(null);
+                router.back();
+            }
+        } catch (error) {
+            console.error("Error fetching establishment details:", error);
+            Alert.alert("Error", "Failed to fetch establishment details.");
             setEstablishment(null);
             router.back();
-          }
-        } catch (error) {
-          console.error("Error fetching establishment details:", error);  // Log the error for debugging
-          Alert.alert("Error", "Failed to fetch establishment details.");
-          setEstablishment(null);
-          router.back();
         } finally {
-          setLoading(false);
+            setLoading(false);
         }
-      };
-    
-    // Record start time when the component mounts
+    };
+
     useEffect(() => {
-        const currentTime = Date.now(); // Record the start time
-        startTime = currentTime;
-        fetchEstablishment();
-    
+        console.log("Component mounted, starting timer...");
+        startTimeRef.current = Date.now(); // Store the start time in a ref
+        fetchEstablishment();  // Fetch establishment details when component mounts
+
         return () => {
-            const endTime = Date.now(); // Record the end time
-            const timeSpent = (endTime - startTime) / 1000; // Time spent in seconds
-    
-            if (establishment) { // Ensure establishment is not null
-                // Track the time spent event with Amplitude
+            const endTime = Date.now();
+            const timeSpent = (endTime - startTimeRef.current!) / 1000; // Time spent in seconds
+            console.log(`Component unmounted, time spent: ${timeSpent} seconds`);
+
+            if (establishment) {
                 amplitude.track('time_spent_on_page', {
                     establishmentName: establishment.name,
-                    timeSpent, // Duration in seconds
+                    timeSpent,
                 });
-    
                 console.log(`Time spent on page: ${timeSpent} seconds for ${establishment.name}`);
             }
         };
-    }, [id, establishment]);
+    }, [id]);
 
     if (loading) {
+        console.log("Loading establishment...");
         return (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#264117" />
             <Text>Loading establishment details...</Text>
           </View>
         );
-      }
-    
+    }
+
     if (!establishment) {
+        console.log("No establishment found.");
         return (
           <View style={styles.container}>
             <Text>Establishment not found.</Text>
           </View>
         );
-      }
+    }
 
     // Handle sharing the happy hour details
     const handleShare = async () => {
@@ -130,8 +133,8 @@ const EstablishmentDetails: React.FC = () => {
             establishmentId: establishment.id,
             establishmentName: establishment.name,
         });
+        console.log("Open maps event logged to Amplitude for", establishment.name);
     };
-
     const handleReportOutdatedHappyHour = () => {
         if (user && user.email) {
             const subject = encodeURIComponent(`Incorrect happy hour for ${establishment.name}`);
