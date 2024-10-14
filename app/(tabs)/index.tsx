@@ -52,8 +52,8 @@ const Live = () => {
         return distance;
     };
 
-    // Handle sorting by distance
-    const handleSortByDistance = async () => {
+    // Automatically sort by distance after fetching establishments and getting user location
+    const fetchAndSortEstablishmentsByDistance = async () => {
         setLoading(true); // Show loading indicator
         try {
             let { status } = await Location.requestForegroundPermissionsAsync();
@@ -67,8 +67,9 @@ const Live = () => {
             const userLatitude = location.coords.latitude;
             const userLongitude = location.coords.longitude;
 
-            // Calculate distance for each establishment
-            const sortedEstablishments = liveEstablishments
+            // Fetch establishments and calculate distance for each establishment
+            const establishments = await fetchEstablishments();
+            const sortedEstablishments = establishments
                 .map(establishment => {
                     const latitude = typeof establishment.latitude === 'string' ? parseFloat(establishment.latitude) : establishment.latitude;
                     const longitude = typeof establishment.longitude === 'string' ? parseFloat(establishment.longitude) : establishment.longitude;
@@ -83,6 +84,7 @@ const Live = () => {
                 })
                 .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
 
+            // Set the sorted establishments
             setLiveEstablishments(sortedEstablishments);
         } catch (error) {
             console.error("Error sorting by distance:", error);
@@ -92,7 +94,7 @@ const Live = () => {
         }
     };
 
-    // Fetch and filter establishments based on current day and time
+    // Filter active deals based on current time
     const filterActiveDeals = (establishments: EstablishmentType[]) => {
         const now = moment.tz('America/Chicago');
         const currentDay = now.format('dddd');
@@ -135,11 +137,13 @@ const Live = () => {
                 });
             });
         };
+
         const initialize = async () => {
             setInitialLoading(true);
-            const fetchedEstablishments = await fetchEstablishments();
-            filterActiveDeals(fetchedEstablishments);
-            trackEstablishmentViews(fetchedEstablishments);
+
+            // Fetch and sort by distance automatically on load
+            await fetchAndSortEstablishmentsByDistance();
+
             setInitialLoading(false);
         };
 
@@ -240,21 +244,15 @@ const Live = () => {
                 <Text style={styles.headingTxt}>Live Deals</Text>
 
                 {/* Categories Component */}
-                <Categories onCategoryChanged={setCategory} onSortByDistance={handleSortByDistance} />
+                <Categories onCategoryChanged={setCategory} />
 
-                {/* Loading Indicator for Sorting */}
-                {loading && (
-                    <View style={styles.loadingOverlay}>
-                        <ActivityIndicator size="large" color="#ffffff" />
-                        <Text style={styles.loadingText}>Finding happy hours near you!</Text>
-                    </View>
-                )}
+                
 
                 {/* Initial Loading Indicator */}
                 {initialLoading ? (
                     <View style={styles.initialLoadingContainer}>
                         <ActivityIndicator size="large" color="#264117" />
-                        <Text style={styles.initialLoadingText}>Loading establishments...</Text>
+                        <Text style={styles.initialLoadingText}>Loading live deals closest to you!</Text>
                     </View>
                 ) : liveEstablishments.length > 0 ? (
                     <FlatList
@@ -265,7 +263,7 @@ const Live = () => {
                         showsVerticalScrollIndicator={false}
                     />
                 ) : (
-                    !loading && <Text style={styles.noDealsText}>No Happy Hour Deals at the moment.</Text>
+                    !loading && <Text style={styles.noDealsText}>No Live Deals Deals at the moment.</Text>
                 )}
             </View>
         </>
