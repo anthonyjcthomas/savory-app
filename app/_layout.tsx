@@ -21,7 +21,10 @@ export default function RootLayout() {
 
       // After auth state is determined, navigate
       if (currentUser) {
-        router.replace('(tabs)');  // Navigate to the tabs if authenticated
+        router.replace({
+          pathname: '(tabs)',  // Navigate to the tabs
+          params: { screen: 'live' },  // Specify Live Deals as the destination screen
+        });
       } else {
         router.replace('landing');  // Navigate to landing if not authenticated
       }
@@ -44,17 +47,11 @@ export default function RootLayout() {
     <BookmarksProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
-          {/* Stack Screens */}
           <Stack.Screen name="landing" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-
-          {/* Establishment Details Screen */}
-          <Stack.Screen
-            name="Establishments/[id]"
-            options={{ headerShown: false }}
-          />
+          <Stack.Screen name="Establishments/[id]" options={{ headerShown: false }} />
         </Stack>
       </ThemeProvider>
     </BookmarksProvider>

@@ -1,336 +1,417 @@
-// app/pages/index.tsx or app/screens/Page.tsx
-
-import { StyleSheet, Text, TouchableOpacity, View, Image, Modal, Alert, ActivityIndicator } from "react-native";
-import React, { useState, useEffect } from 'react';
-import { Stack, router } from 'expo-router';
-import ModalDropdown from 'react-native-modal-dropdown';
-import Categories from "@/components/Categories";
-import Establishments from '@/components/Establishments';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, Linking, Alert, ActivityIndicator } from 'react-native';
+import { Stack } from 'expo-router';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { getAuth, signOut } from "firebase/auth";
-import { FontAwesome5 } from "@expo/vector-icons";
-import * as Linking from 'expo-linking';
+import moment from 'moment-timezone';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { EstablishmentType, HappyHourDeal } from '@/types/establishmentType';
+import Categories from "@/components/Categories";
+import * as Location from 'expo-location';
+import { db } from '../../firebaseConfig.js'; // Adjust the path as necessary
+import { collection, getDocs } from 'firebase/firestore';
+import { amplitude } from '../../firebaseConfig.js';
 
-const availableHours = [
-  "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
-  "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM",
-  "5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM",
-  "9:00 PM", "10:00 PM", "11:00 PM", "12:00 AM"
-];
+const Live = () => {
+    const headerHeight = useHeaderHeight();
+    const [liveEstablishments, setLiveEstablishments] = useState<EstablishmentType[]>([]);
+    const [category, setCategory] = useState<string>('All');
+    const [loading, setLoading] = useState<boolean>(false); // Loading state for distance calculation
+    const [initialLoading, setInitialLoading] = useState<boolean>(true); // Loading state for initial data fetch
 
-const Page = () => {
-  const [dayOfWeek, setDayOfWeek] = useState("Select Day");
-  const [selectedHour, setSelectedHour] = useState("Select Hour");
-  const [category, setCategory] = useState("All");
-  const [filterModalVisible, setFilterModalVisible] = useState(false); // For modal visibility
-  const [loading, setLoading] = useState(false); // For showing the loading popup
-  const headerHeight = useHeaderHeight();
-  const auth = getAuth();
-  const user = auth.currentUser;
-  const [sortedByDistance, setSortedByDistance] = useState(false); // New state for sorting
+    // Fetch establishments from Firestore
+    const fetchEstablishments = async (): Promise<EstablishmentType[]> => {
+        try {
+            const establishmentsCollection = collection(db, 'establishments');
+            const establishmentsSnapshot = await getDocs(establishmentsCollection);
+            const establishmentsList = establishmentsSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            })) as EstablishmentType[];
+            return establishmentsList;
+        } catch (error) {
+            console.error("Error fetching establishments from Firestore:", error);
+            Alert.alert("Error", "Failed to fetch establishments. Please try again later.");
+            return [];
+        }
+    };
 
-  // Predefined days of the week in correct order
-  const availableDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    // Calculate distance between two coordinates using Haversine formula
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const toRad = (value: number) => (value * Math.PI) / 180;
+        const R = 6371; // Radius of the Earth in kilometers
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(toRad(lat1)) *
+            Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c; // Distance in kilometers
+        return distance;
+    };
 
-  // Sign out function
-  const handleSignOut = () => {
-    signOut(auth)
-      .then(() => {
-        console.log('User signed out successfully');
-        router.replace("/landing");
-      })
-      .catch(error => {
-        console.error('Error signing out: ', error);
-      });
-  };
+    // Handle sorting by distance
+    const handleSortByDistance = async () => {
+        setLoading(true); // Show loading indicator
+        try {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert("Location Permission Denied", "Please allow location access to sort establishments by proximity.");
+                setLoading(false);
+                return;
+            }
 
-  // Reset filters
-  const resetFilters = () => {
-    setDayOfWeek("Select Day");
-    setSelectedHour("Select Hour");
-  };
+            const location = await Location.getCurrentPositionAsync({});
+            const userLatitude = location.coords.latitude;
+            const userLongitude = location.coords.longitude;
 
-  // Function to handle sorting by distance
-  const handleSortByDistance = () => {
-    console.log("Sorting by distance");
-    setSortedByDistance(true);
-  };
+            // Calculate distance for each establishment
+            const sortedEstablishments = liveEstablishments
+                .map(establishment => {
+                    const latitude = typeof establishment.latitude === 'string' ? parseFloat(establishment.latitude) : establishment.latitude;
+                    const longitude = typeof establishment.longitude === 'string' ? parseFloat(establishment.longitude) : establishment.longitude;
 
-  // Function to handle category change
-  const handleCategoryChange = (selectedCategory: string) => {
-    console.log("Category changed to:", selectedCategory);
-    setCategory(selectedCategory);
-    setSortedByDistance(false); // Reset sort when category changes
-  };
+                    if (isNaN(latitude) || isNaN(longitude)) {
+                        console.warn(`Invalid coordinates for establishment ${establishment.id}: lat=${establishment.latitude}, lon=${establishment.longitude}`);
+                        return { ...establishment, distance: Infinity }; // Assign a large distance if invalid
+                    }
 
-  // Function to handle sending an email report
-  const handleReport = () => {
-    if (user && user.email) {
-      const email = `mailto:saveoryapp@gmail.com?subject=User%20Report&body=Dear%20Support,%0D%0A%0D%0AI'm%20experiencing%20an%20issue%20with%20Saveory.%20Please%20assist%20me.%0D%0A%0D%0ARegards,%0D%0A${user.email}`;
-      Linking.openURL(email).catch(err => console.error('Error sending email:', err));
-    } else {
-      Alert.alert('Error', 'No logged-in user found.');
-    }
-  };
+                    const distance = calculateDistance(userLatitude, userLongitude, latitude, longitude);
+                    return { ...establishment, distance };
+                })
+                .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
 
-  return (
-    <>
-      <Stack.Screen
-        options={{
-          headerTransparent: true,
-          headerTitle: () => (
-            <View style={styles.headerContainer}>
-              <TouchableOpacity style={styles.reportButton} onPress={handleReport}>
-                <Text style={styles.reportText}>Report</Text>
-              </TouchableOpacity>
-              <Image
-                source={require('../../assets/images/Savor-Logo.webp')}
-                style={styles.image}
-              />
-              <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-                <Text style={styles.signOutText}>Sign Out</Text>
-              </TouchableOpacity>
+            setLiveEstablishments(sortedEstablishments);
+        } catch (error) {
+            console.error("Error sorting by distance:", error);
+            Alert.alert("Error", "Failed to sort establishments by distance.");
+        } finally {
+            setLoading(false); // Hide loading indicator
+        }
+    };
+
+    // Fetch and filter establishments based on current day and time
+    const filterActiveDeals = (establishments: EstablishmentType[]) => {
+        const now = moment.tz('America/Chicago');
+        const currentDay = now.format('dddd');
+        const currentTime = now.format('HH:mm');
+
+        const activeDeals = establishments.filter((establishment: EstablishmentType) => {
+            const categoryMatch = category === 'All' ||
+                (Array.isArray(establishment.category) && establishment.category.includes(category));
+
+            return (
+                categoryMatch &&
+                establishment.happy_hour_deals.some((deal: HappyHourDeal) => {
+                    if (deal.deal_list.includes(currentDay)) {
+                        const startTime = moment.tz(deal.start_time, 'HH:mm', 'America/Chicago');
+                        const endTime = moment.tz(deal.end_time, 'HH:mm', 'America/Chicago');
+                        const current = moment.tz(currentTime, 'HH:mm', 'America/Chicago');
+
+                        // Adjust end time if it's the next day
+                        if (endTime.isBefore(startTime)) {
+                            endTime.add(1, 'day');
+                        }
+
+                        return current.isBetween(startTime, endTime);
+                    }
+                    return false;
+                })
+            );
+        });
+
+        setLiveEstablishments(activeDeals);
+    };
+
+    // Initial data fetch and setup
+    useEffect(() => {
+        const trackEstablishmentViews = (establishments: EstablishmentType[]) => {
+            establishments.forEach(establishment => {
+                amplitude.track('view_establishment', {
+                    establishmentId: establishment.id,
+                    establishmentName: establishment.name,
+                });
+            });
+        };
+        const initialize = async () => {
+            setInitialLoading(true);
+            const fetchedEstablishments = await fetchEstablishments();
+            filterActiveDeals(fetchedEstablishments);
+            trackEstablishmentViews(fetchedEstablishments);
+            setInitialLoading(false);
+        };
+
+        initialize();
+    }, [category]);
+
+    // Function to open maps for directions
+    const openMaps = (location: string, name: string) => {
+        const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ', ' + location)}`;
+        Linking.openURL(url).catch(err => {
+            console.error("Error opening maps:", err);
+            Alert.alert("Error", "Failed to open maps.");
+        });
+        // Track the open maps event with Amplitude
+        amplitude.track('click_open_maps', {
+            establishmentName: name,
+        });
+    };
+
+    // Render individual establishment item
+    const renderEstablishment = ({ item }: { item: EstablishmentType }) => {
+        const now = moment.tz('America/Chicago');
+        const currentDay = now.format('dddd');
+        const currentTime = now.format('HH:mm');
+
+        // Get the deals for the current day that are ongoing at the current time
+        const currentDeals = item.happy_hour_deals.filter(deal => {
+            if (deal.deal_list.includes(currentDay)) {
+                const dealStartTime = moment.tz(deal.start_time, 'HH:mm', 'America/Chicago');
+                const dealEndTime = moment.tz(deal.end_time, 'HH:mm', 'America/Chicago');
+
+                // Adjust end time if it's the next day
+                if (dealEndTime.isBefore(dealStartTime)) {
+                    dealEndTime.add(1, 'day');
+                }
+
+                const currentMoment = moment.tz(currentTime, 'HH:mm', 'America/Chicago');
+                return currentMoment.isBetween(dealStartTime, dealEndTime);
+            }
+            return false;
+        });
+
+        if (currentDeals.length === 0) {
+            return null; // Don't display anything if there are no deals going on
+        }
+
+        // Display the distance if available
+        const distanceText = item.distance !== undefined && item.distance !== null && isFinite(item.distance)
+            ? `${(item.distance * 0.621371).toFixed(2)} miles away` // Convert km to miles
+            : '';
+
+        return (
+            <View style={styles.establishmentContainer}>
+                <Image source={{ uri: item.image }} style={styles.establishmentImage} />
+                <Text style={styles.establishmentName}>{item.name}</Text>
+
+                {/* Display only the deal that is active at the current time */}
+                {currentDeals.map((deal, index) => (
+                    <Text key={index} style={styles.happyHourDetails}>{deal.details}</Text>
+                ))}
+
+                <Text style={styles.establishmentCuisine}>{item.cuisine} Cuisine</Text>
+                <View style={styles.locationRow}>
+                    <TouchableOpacity onPress={() => openMaps(item.location, item.name)} style={styles.locationButton}>
+                        <FontAwesome5 name="map-marker-alt" size={18} color='#ffffff' />
+                        <Text style={styles.locationText}>Directions</Text>
+                    </TouchableOpacity>
+                   
+                    <View style={styles.ratingWrapper}>
+                        <Ionicons name="star" size={18} color={'#ffffff'} />
+                        <Text style={styles.ratingText}>{item.rating}</Text>
+                    </View>
+                </View>
             </View>
-          ),
-          headerStyle: {
-            backgroundColor: '#ffffff',
-          },
-        }}
-      />
+        );
+    };
 
-      <View style={[styles.container, { paddingTop: headerHeight }]}>
-        <Text style={styles.headingTxt}>Food. Easier. Near You.</Text>
+    return (
+        <>
+            <Stack.Screen
+                options={{
+                    headerTransparent: true,
+                    headerTitle: () => (
+                        <View style={styles.headerContainer}>
+                            <Image
+                                source={require('../../assets/images/Savor-Logo.webp')}
+                                style={styles.image}
+                            />
+                        </View>
+                    ),
+                    headerStyle: {
+                        backgroundColor: '#ffffff',
+                    },
+                }}
+            />
 
-        {/* Filter Button Section */}
-        <View style={styles.filterSection}>
-          <TouchableOpacity
-            style={styles.indexfilterButton}
-            onPress={() => setFilterModalVisible(true)}
-          >
-            <Text style={styles.filterButtonText}>Filters</Text>
-          </TouchableOpacity>
-        </View>
+            <View style={[styles.container, { paddingTop: headerHeight }]}>
+                <Text style={styles.headingTxt}>Live Deals</Text>
 
-        {/* Modal for Day, Hour, and Reset */}
-<Modal
-  transparent={true}
-  animationType="slide"
-  visible={filterModalVisible}
-  onRequestClose={() => setFilterModalVisible(false)}
->
-  <View style={styles.modalContainer}>
-    <View style={styles.modalContent}>
-      <Text style={styles.modalHeading}>Select Filters</Text>
+                {/* Categories Component */}
+                <Categories onCategoryChanged={setCategory} onSortByDistance={handleSortByDistance} />
 
-      {/* Day Selector */}
-      <ModalDropdown
-        key={`day-dropdown-${dayOfWeek}`}
-        options={availableDays}
-        defaultValue={dayOfWeek}
-        onSelect={(index, value) => setDayOfWeek(value)}
-        textStyle={styles.dropdownText}
-        dropdownStyle={styles.dropdown}
-        dropdownTextStyle={styles.dropdownItemText}
-      />
+                {/* Loading Indicator for Sorting */}
+                {loading && (
+                    <View style={styles.loadingOverlay}>
+                        <ActivityIndicator size="large" color="#ffffff" />
+                        <Text style={styles.loadingText}>Finding happy hours near you!</Text>
+                    </View>
+                )}
 
-      {/* Hour Selector */}
-      <ModalDropdown
-        key={`hour-dropdown-${selectedHour}`}
-        options={availableHours}
-        defaultValue={selectedHour}
-        onSelect={(index, value) => setSelectedHour(value)}
-        textStyle={styles.dropdownText}
-        dropdownStyle={styles.dropdown}
-        dropdownTextStyle={styles.dropdownItemText}
-      />
-
-      {/* Reset Button */}
-      <TouchableOpacity onPress={resetFilters} style={[styles.filterButton, styles.buttonSpacing]}>
-        <Text style={styles.filterButtonText}>Reset</Text>
-      </TouchableOpacity>
-
-      {/* Apply Filters Button */}
-      <TouchableOpacity
-        onPress={() => setFilterModalVisible(false)} // Close modal after applying filters
-        style={[styles.filterButton, styles.buttonSpacing]}
-      >
-        <Text style={styles.filterButtonText}>Apply Filters</Text>
-      </TouchableOpacity>
-
-      {/* Close Modal Button */}
-      <TouchableOpacity
-        onPress={() => setFilterModalVisible(false)}
-        style={[styles.filterButton, styles.buttonSpacing]}
-      >
-        <Text style={styles.filterButtonText}>Close</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
-
-
-        {/* Categories Component */}
-        <Categories onCategoryChanged={handleCategoryChange} onSortByDistance={handleSortByDistance} />
-
-        {/* Establishments filtered by day, hour, and category */}
-        <Establishments
-          selectedHour={selectedHour}
-          category={category}
-          dotw={dayOfWeek}
-          sortedByDistance={sortedByDistance}
-        />
-      </View>
-
-      {/* Loading Popup */}
-      {loading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#ffffff" />
-          <Text style={styles.loadingText}>Finding happy hours near you!</Text>
-        </View>
-      )}
-    </>
-  );
+                {/* Initial Loading Indicator */}
+                {initialLoading ? (
+                    <View style={styles.initialLoadingContainer}>
+                        <ActivityIndicator size="large" color="#264117" />
+                        <Text style={styles.initialLoadingText}>Loading establishments...</Text>
+                    </View>
+                ) : liveEstablishments.length > 0 ? (
+                    <FlatList
+                        data={liveEstablishments}
+                        keyExtractor={item => item.id}
+                        renderItem={renderEstablishment}
+                        contentContainerStyle={styles.list}
+                        showsVerticalScrollIndicator={false}
+                    />
+                ) : (
+                    !loading && <Text style={styles.noDealsText}>No Happy Hour Deals at the moment.</Text>
+                )}
+            </View>
+        </>
+    );
 };
 
-export default Page;
-
-
+export default Live;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  filterSection: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  indexfilterButton: {
-    backgroundColor: '#264117',
-    padding: 12,
-    borderRadius: 8,
-    marginHorizontal: 10,
-    width: 90, // Ensure buttons are uniform in size
-    alignItems: 'center',
-  },
-  filterButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-  },
-  headingTxt: {
-    marginTop: 10,
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#264117',
-    textAlign: 'center',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    width: '80%',
-    padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  modalHeading: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  dropdownText: {
-    fontSize: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderWidth: 1,
-    borderColor: '#264117',
-    borderRadius: 20,
-    backgroundColor: '#264117',
-    color: '#ffffff',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  dropdown: {
-    width: '100%',
-    borderColor: '#264117',
-    borderWidth: 1,
-    borderRadius: 20,
-    backgroundColor: '#264117',
-    marginTop: 2,
-  },
-  dropdownItemText: {
-    fontSize: 16,
-    padding: 10,
-    color: '#ffffff',
-    backgroundColor: '#264117',
-  },
-  filterButton: {
-    backgroundColor: '#264117',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    width: '70%',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonSpacing: {
-    marginTop: 8,
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 15,
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between', // Spaces the buttons to the sides
-    width: '100%',
-    paddingHorizontal: 20,
-  },
-  image: {
-    marginLeft: 11,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  reportButton: {
-    backgroundColor: '#264117',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 5,
-  },
-  reportText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  signOutButton: {
-    backgroundColor: '#264117',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 5,
-  },
-  signOutText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
+    container: {
+        flex: 1,
+        backgroundColor: '#f5f5f5',
+        paddingHorizontal: 16,
+    },
+    headerContainer: {
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column',
+        paddingBottom: 30,
+    },
+    image: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        marginTop: 30,
+    },
+    headingTxt: {
+        marginTop: 10,
+        fontSize: 28,
+        fontWeight: '800',
+        color: '#264117',
+        textAlign: 'center',
+    },
+    list: {
+        marginTop: 0,
+    },
+    establishmentContainer: {
+        marginBottom: 20,
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        width: '94.5%', // Shrink the width to 94.5% for better spacing
+        alignSelf: 'center', // Center the container
+    },
+    establishmentImage: {
+        width: '100%',
+        height: 150,
+        borderRadius: 10,
+        marginBottom: 10,
+    },
+    establishmentName: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#264117',
+        marginBottom: 5,
+    },
+    happyHourDetails: {
+        fontSize: 16,
+        color: '#264117',
+        marginBottom: 10,
+    },
+    establishmentCuisine: {
+        fontSize: 14,
+        color: '#7a7a7a',
+        marginBottom: 10,
+    },
+    locationRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    locationButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#264117',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 5,
+    },
+    locationText: {
+        color: '#ffffff',
+        marginLeft: 8,
+    },
+    distanceWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#264117',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 5,
+    },
+    distanceText: {
+        color: '#ffffff',
+        marginLeft: 8,
+    },
+    ratingWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#264117',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 5,
+    },
+    ratingText: {
+        color: '#ffffff',
+        marginLeft: 8,
+    },
+    noDealsText: {
+        fontSize: 18,
+        textAlign: 'center',
+        marginTop: 350,
+        color: '#555',
+    },
+    loadingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+    },
+    loadingText: {
+        marginTop: 15,
+        color: '#ffffff',
+        fontSize: 18,
+        fontWeight: '600',
+    },
+    initialLoadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    initialLoadingText: {
+        marginTop: 15,
+        color: '#264117',
+        fontSize: 18,
+        fontWeight: '600',
+    },
 });

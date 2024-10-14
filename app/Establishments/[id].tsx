@@ -219,14 +219,14 @@ const EstablishmentDetails: React.FC = () => {
 
                     {/* Outdated Button and Happy Hour Details */}
                     <View style={styles.footer}>
-                        <Text style={styles.footerTitle}>Happy Hours</Text>
-                        {establishment.happy_hour_deals.map((deal, index) => (
-                            <View key={index} style={styles.happyHourDeal}>
-                                <Text style={styles.happyHourDay}>{deal.day}:</Text>
-                                <Text style={styles.happyHourText}>{deal.details}</Text>
-                            </View>
-                        ))}
-                    </View>
+                    <Text style={styles.footerTitle}>Happy Hours</Text>
+                    {establishment.happy_hour_deals.map((deal, index) => (
+                        <View key={index} style={styles.happyHourDeal}>
+                            <Text style={styles.happyHourDay}>{deal.day}:</Text>
+                            <Text style={styles.happyHourText}>{deal.details}</Text>
+                        </View>
+                    ))}
+                </View>
 
                     {/* Comments Section */}
                     <TouchableOpacity style={styles.outdatedButton} onPress={handleReportOutdatedHappyHour}>
@@ -247,6 +247,37 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    footer: {
+        padding: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#dcdcdc',
+        width: '100%',
+        backgroundColor: '#f5f5f5',
+    },
+    footerTitle: {
+        alignItems: 'center',
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#264117',
+        marginBottom: 20,
+        marginLeft: 100,
+    },
+    happyHourDeal: {
+        marginBottom: 15,  // Space between deals
+        alignItems: 'flex-start',  // Align all text to the left
+    },
+    happyHourDay: {
+        fontSize: 18,
+        marginLeft: 10,
+        fontWeight: 'bold',
+        color: '#264117',
+        marginBottom: 5,  // Add space below the day label
+    },
+    happyHourText: {
+        fontSize: 16,
+        color: '#264117',
+        marginLeft: 10,  // Add a small indentation for the details
     },
     loadingContainer: {
         flex: 1,
@@ -288,6 +319,10 @@ const styles = StyleSheet.create({
         color: '#264117',
         letterSpacing: 0.5,
     },
+    happyHourRow: {
+        flexDirection: 'row',
+        alignItems: 'center', 
+    },
     establishmentLocationWrapper: {
         flexDirection: 'row',
         marginTop: 5,
@@ -319,35 +354,6 @@ const styles = StyleSheet.create({
     HighlightTextVal: {
         fontSize: 14,
         color: '#7a7a7a',
-    },
-    footer: {
-        padding: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#dcdcdc',
-        alignItems: 'center',
-        width: '100%',
-    },
-    footerTitle: {
-        fontSize: 28,
-        fontWeight: '600',
-        color: '#264117',
-        marginBottom: 10,
-    },
-    happyHourDeal: {
-        marginBottom: 10,
-        alignItems: 'flex-start',
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-    },
-    happyHourDay: {
-        fontSize: 20,
-        fontWeight: '600',
-        color: '#264117',
-        marginRight: 5,
-    },
-    happyHourText: {
-        fontSize: 16,
-        color: '#264117',
     },
     outdatedButton: {
         backgroundColor: '#264117',
