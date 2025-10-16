@@ -10,7 +10,6 @@ Serving **2,000+ users** and **60+ local businesses**.
 - [Features](#features)
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
-- [Screenshots](#screenshots)
 - [Getting Started](#getting-started)
 - [Configuration](#configuration)
 - [Data Model (Firestore)](#data-model-firestore)
@@ -55,15 +54,6 @@ React Native (Expo/CLI)
 **Backend:** Firebase Auth, Firestore, Cloud Storage, Cloud Functions (Node)  
 **Infra/Other:** AWS (hosting/assets as needed), Databricks (experiments), GitHub Actions (CI)  
 **Maps/Location:** `react-native-maps`, device geolocation APIs
-
----
-
-## Screenshots
-> _Drop images in `/docs/img/` and update paths below._
-- Home (feed): `docs/img/feed.png`
-- Map: `docs/img/map.png`
-- Deal detail: `docs/img/detail.png`
-- Bookmarks: `docs/img/bookmarks.png`
 
 ---
 
